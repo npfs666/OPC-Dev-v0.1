@@ -113,11 +113,14 @@ void loop1() {
 		display.setTextSize(3);      // Normal 1:1 pixel scale
 		display.setTextColor(SSD1306_WHITE); // Draw white text
 		display.cp437(true);         // Use full 256 char 'Code Page 437' font
-		display.setTextSize(1);
+		display.setTextSize(2);
 		display.setCursor(0, 0);     // Start at top-left corner
-		display.printf("R= %3.3lf", Rrtd);
+		display.printf("Consigne");
+		display.setTextSize(2); 
+		display.setCursor(0, 20);     // Start at top-left corner
+		display.printf("%3.3lf", Rrtd);
 		display.setTextSize(3); 
-		display.setCursor(0, 30);     // Start at top-left corner
+		display.setCursor(0, 40);     // Start at top-left corner
 		display.printf("%3.3lf", temp);
 		display.display();
 
