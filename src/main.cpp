@@ -28,15 +28,16 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Adafruit_ST7789.h>
 
 // Ecran SPI OLED
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_DC     7
-#define OLED_CS     13
-#define OLED_RESET  9
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,&SPI1, OLED_DC, OLED_RESET, OLED_CS);
-
+#define OLED_DC 7
+#define OLED_CS 13
+#define OLED_RESET 9
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,&SPI1, OLED_DC, OLED_RESET, OLED_CS);
+Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, OLED_CS, OLED_DC, OLED_RESET);
 
 void rotencInterrupt();
 void adcInterrupt();
@@ -51,41 +52,42 @@ void setup()
 	Serial.begin(115200);
 	Serial.println("Open Process Controller");
 
-	
-	adc.init(TYPE_3WIRE, 50);
-	adc.set3WirePT100();
-	adc.set3WireIDAC();
-	/*adc.init(TYPE_4WIRE, 40);
-	adc.set4WirePT100();*/
+	/*adc.init(TYPE_3WIRE, 50);
+	/*adc.set3WirePT100();
+	adc.set3WireIDAC();*/
+	adc.init(TYPE_4WIRE, 50);
+	adc.set4WirePT100();
 	adc.startContinuous(adcInterrupt);
-
-	
 }
 
-void setup1() {
+void setup1()
+{
 	delay(2000);
 	pinMode(14, INPUT);
 	pinMode(15, INPUT);
 	attachInterrupt(digitalPinToInterrupt(14), rotencInterrupt, FALLING);
 
 	SPI1.setSCK(10);
-  	SPI1.setTX(11);
-	  
+	SPI1.setTX(11);
+	
+
 	// SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-	if(!display.begin(SSD1306_SWITCHCAPVCC)) {
+	/*if(!display.begin(SSD1306_SWITCHCAPVCC)) {
 		Serial.println(F("SSD1306 allocation failed"));
 		for(;;); // Don't proceed, loop forever
-	}
+	}*/
+	tft.init(135, 240); // Init ST7789 240x240
+	tft.setRotation(1);
+	tft.fillScreen(ST77XX_BLACK);
 }
 
 /**
  * Cpu1 : contrôle des IT utilisateur et écran
- * @brief 
- * 
+ * @brief
+ *
  */
-void loop1() {
-	
-	
+void loop1()
+{
 
 	if (adc.rtd.newMeasure)
 	{
@@ -103,26 +105,49 @@ void loop1() {
 		double_t temp = -244.83 + Rrtd * (2.3419 + 0.0010664 * Rrtd);
 
 		G_Temperature = temp;
-		
+
 		Serial.print((String)res + " ; ");
 		Serial.print(Rrtd, 3);
 		Serial.print(" ; ");
 		Serial.println(temp, 3);
 
-		display.clearDisplay();
-		display.setTextSize(3);      // Normal 1:1 pixel scale
+		/*display.clearDisplay();
+		display.setTextSize(3);				 // Normal 1:1 pixel scale
 		display.setTextColor(SSD1306_WHITE); // Draw white text
-		display.cp437(true);         // Use full 256 char 'Code Page 437' font
+		display.cp437(true);				 // Use full 256 char 'Code Page 437' font
 		display.setTextSize(2);
-		display.setCursor(0, 0);     // Start at top-left corner
+		display.setCursor(0, 0); // Start at top-left corner
 		display.printf("Consigne");
-		display.setTextSize(2); 
-		display.setCursor(0, 20);     // Start at top-left corner
+		display.setTextSize(2);
+		display.setCursor(0, 20); // Start at top-left corner
 		display.printf("%3.3lf", Rrtd);
-		display.setTextSize(3); 
-		display.setCursor(0, 40);     // Start at top-left corner
+		display.setTextSize(3);
+		display.setCursor(0, 40); // Start at top-left corner
 		display.printf("%3.3lf", temp);
-		display.display();
+		display.display();*/
+		char TX[50];
+		//tft.fillScreen(ST77XX_BLACK);
+		tft.setTextSize(3);				 // Normal 1:1 pixel scale
+		tft.setTextColor(ST77XX_WHITE); // Draw white text
+		tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
+		tft.setTextSize(2);
+		tft.setCursor(0, 0); // Start at top-left corner
+		tft.printf("Consigne");
+		tft.setTextSize(2);
+		tft.setCursor(0, 20); // Start at top-left corner
+		tft.setTextColor(ST77XX_GREEN);
+		sprintf(TX,"%3.3lf", Rrtd); //  XXX.XX
+		tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
+		tft.printf(TX);
+		tft.setTextSize(3);
+		tft.setCursor(0, 40); // Start at top-left corner
+		tft.setTextColor(ST77XX_RED);
+		sprintf(TX,"%3.3lf", temp); //  XXX.XX
+		tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
+		
+		tft.setCursor(0, 40); // Start at top-left corner
+		tft.printf(TX);
+		
 
 		// Serial.print(";");
 		// Serial.println(millis()/1000);
@@ -138,17 +163,17 @@ void adcInterrupt()
 {
 	int val = adc.ads1120.readADC();
 	adc.rtd.add(val);
-	//Serial.println(val);
+	// Serial.println(val);
 
 	// If 3 wire, chopp the current sources
-	if ((adc.rtd.type == TYPE_3WIRE) && (adc.rtd.sampleCount == (adc.rtd.samples / 2)) && (adc.rtd.samples % 2 == 0) )
+	if ((adc.rtd.type == TYPE_3WIRE) && (adc.rtd.sampleCount == (adc.rtd.samples / 2)) && (adc.rtd.samples % 2 == 0))
 	{
-		//Serial.println(adc.rtd.sum);
-		//adc.ads1120.startSync();
+		// Serial.println(adc.rtd.sum);
+		// adc.ads1120.startSync();
 		adc.invert3WireIDAC();
-		//adc.ads1120.startSync();
-		//Serial.println("inversion");
-		//adc.ads1120.startSync();
+		// adc.ads1120.startSync();
+		// Serial.println("inversion");
+		// adc.ads1120.startSync();
 	}
 
 	// If all samples are measured, compute the result
@@ -158,18 +183,18 @@ void adcInterrupt()
 
 		if (adc.rtd.type == TYPE_3WIRE)
 		{
-			//adc.ads1120.startSync();
+			// adc.ads1120.startSync();
 			adc.set3WireIDAC();
-			//adc.ads1120.startSync();
-			//adc.ads1120.startSync();
+			// adc.ads1120.startSync();
+			// adc.ads1120.startSync();
 		}
 	}
 }
 
 /**
  * CPU0 : contrôle de la mesure ADC et de la régulation
- * @brief 
- * 
+ * @brief
+ *
  */
 void loop()
 {
@@ -212,17 +237,16 @@ void loop()
 	}*/
 }
 
-
-
-void printScreen(double_t temp) {
+/*void printScreen(double_t temp)
+{
 	display.clearDisplay();
 
-	display.setTextSize(3);      // Normal 1:1 pixel scale
+	display.setTextSize(3);				 // Normal 1:1 pixel scale
 	display.setTextColor(SSD1306_WHITE); // Draw white text
-	display.setCursor(0, 30);     // Start at top-left corner
-	display.cp437(true);         // Use full 256 char 'Code Page 437' font
+	display.setCursor(0, 30);			 // Start at top-left corner
+	display.cp437(true);				 // Use full 256 char 'Code Page 437' font
 
-	//double_t temp = 100.13;
+	// double_t temp = 100.13;
 	display.printf("%3.3lf", temp);
 	display.display();
-}
+}*/
