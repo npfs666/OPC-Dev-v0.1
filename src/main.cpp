@@ -29,6 +29,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_ST7789.h>
+#include "pico/stdlib.h"
+
 
 // Ecran SPI OLED
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -53,7 +55,7 @@ void setup()
 	Serial.println("Open Process Controller");
 
 	/*adc.init(TYPE_3WIRE, 50);
-	/*adc.set3WirePT100();
+	adc.set3WirePT100();
 	adc.set3WireIDAC();*/
 	adc.init(TYPE_4WIRE, 50);
 	adc.set4WirePT100();
@@ -97,7 +99,7 @@ void loop1()
 		// Application de l'erreur PGA
 		// res += 1;
 
-		double_t Rrtd = (res * 1650.56) / (32767 * 8.0);
+		double_t Rrtd = (res * 1650.56) / (32767 * 16.0);
 
 		double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
 
@@ -126,7 +128,7 @@ void loop1()
 		display.printf("%3.3lf", temp);
 		display.display();*/
 		char TX[50];
-		//tft.fillScreen(ST77XX_BLACK);
+		tft.fillScreen(ST77XX_BLACK);
 		tft.setTextSize(3);				 // Normal 1:1 pixel scale
 		tft.setTextColor(ST77XX_WHITE); // Draw white text
 		tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
@@ -137,17 +139,26 @@ void loop1()
 		tft.setCursor(0, 20); // Start at top-left corner
 		tft.setTextColor(ST77XX_GREEN);
 		sprintf(TX,"%3.3lf", Rrtd); //  XXX.XX
-		tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
+		//tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
 		tft.printf(TX);
 		tft.setTextSize(3);
 		tft.setCursor(0, 40); // Start at top-left corner
 		tft.setTextColor(ST77XX_RED);
 		sprintf(TX,"%3.3lf", temp); //  XXX.XX
-		tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
+		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
 		
 		tft.setCursor(0, 40); // Start at top-left corner
 		tft.printf(TX);
+
 		
+		double internalTemp = analogReadTemp();
+		tft.setTextSize(3);
+		tft.setCursor(0, 40); // Start at top-left corner
+		tft.setTextColor(ST77XX_RED);
+		sprintf(TX,"%2.1lf", internalTemp); //  XXX.XX
+		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
+		tft.setCursor(0, 60); // Start at top-left corner
+		tft.printf(TX);
 
 		// Serial.print(";");
 		// Serial.println(millis()/1000);

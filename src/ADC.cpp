@@ -52,8 +52,8 @@ void ADC::set4WirePT100()
     ads1120.setVoltageRef(VREF_EXTERNAL_REFP0_REFN0);
     ads1120.setIDAC1routing(IDAC_AIN3_REFN1);
     //ads1120.setIDAC2routing(IDAC_AIN3_REFN1);
-    ads1120.setIDACcurrent(CURRENT_1000_UA);
-    ads1120.setGain(8);
+    ads1120.setIDACcurrent(CURRENT_500_UA);
+    ads1120.setGain(16);
 }
 /**
  * @brief Configures the ADC to measure a 3-Wire RTD
