@@ -33,6 +33,12 @@ ADC::ADC()
 {
     rtd.reset();
 }
+/**
+ * @brief 
+ * 
+ * @param type 
+ * @param samples 4 samples -> 1bit improve, 16 -> 2bits, 64 -> 3bits, 256 -> 4bits
+ */
 void ADC::init(uint8_t type, uint16_t samples)
 {
     rtd.type = type;
@@ -52,8 +58,8 @@ void ADC::set4WirePT100()
     ads1120.setVoltageRef(VREF_EXTERNAL_REFP0_REFN0);
     ads1120.setIDAC1routing(IDAC_AIN3_REFN1);
     //ads1120.setIDAC2routing(IDAC_AIN3_REFN1);
-    ads1120.setIDACcurrent(CURRENT_500_UA);
-    ads1120.setGain(16);
+    ads1120.setIDACcurrent(CURRENT_1000_UA);
+    ads1120.setGain(8);
 }
 /**
  * @brief Configures the ADC to measure a 3-Wire RTD

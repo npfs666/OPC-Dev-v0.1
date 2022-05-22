@@ -48,16 +48,21 @@ void printScreen(double_t temp);
 double_t G_Temperature;
 ADC adc;
 
+const double rtdInterpol[] = {-500.00, 
+							-219.415, -196.509, -173.118, -149.304, -125.122, -100.617, -75.827, -50.781, -25.501, 0.000,
+							  25.686, 51.571, 77.660, 103.958, 130.469, 157.198, 184.152, 211.336, 238.756, 266.419};
+
+
 void setup()
 {
 	delay(2000);
 	Serial.begin(115200);
 	Serial.println("Open Process Controller");
 
-	/*adc.init(TYPE_3WIRE, 50);
+	/*adc.init(TYPE_3WIRE, 64);
 	adc.set3WirePT100();
 	adc.set3WireIDAC();*/
-	adc.init(TYPE_4WIRE, 50);
+	adc.init(TYPE_4WIRE, 64);
 	adc.set4WirePT100();
 	adc.startContinuous(adcInterrupt);
 }
@@ -71,6 +76,7 @@ void setup1()
 
 	SPI1.setSCK(10);
 	SPI1.setTX(11);
+	
 	
 
 	// SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -99,7 +105,9 @@ void loop1()
 		// Application de l'erreur PGA
 		// res += 1;
 
-		double_t Rrtd = (res * 1650.56) / (32767 * 16.0);
+		// Rref (@21°c) = 1649.797
+		// Rref (@18°c) = 1650.56 (ancienne cal)
+		double_t Rrtd = (res * 1650.316) / (32767 * 8.0);
 
 		double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
 
@@ -108,11 +116,31 @@ void loop1()
 
 		G_Temperature = temp;
 
-		Serial.print((String)res + " ; ");
-		Serial.print(Rrtd, 3);
-		Serial.print(" ; ");
-		Serial.println(temp, 3);
 
+		// Test interpolation
+		int16_t index=(int) (Rrtd/10);
+		double frac = (double)(Rrtd/10.0) - index;
+		double a = rtdInterpol[index];
+		double tempInter = 0;
+
+		if (index==Rrtd/10) {
+		tempInter = rtdInterpol[index];
+		}
+		
+		double b=rtdInterpol[index+1]/2.0;
+		double c=rtdInterpol[index-1]/2.0;
+		tempInter=(double)a + frac*(b-c + frac*(c+b-a));
+
+
+		Serial.print((String)res + " ; ");
+		Serial.print(Rrtd, 4);
+		Serial.print(" ; ");
+		Serial.print(temp, 4);
+		Serial.print(" ; ");
+		Serial.println(tempInter, 4);
+
+
+		// Ancien code OLED
 		/*display.clearDisplay();
 		display.setTextSize(3);				 // Normal 1:1 pixel scale
 		display.setTextColor(SSD1306_WHITE); // Draw white text
@@ -138,7 +166,7 @@ void loop1()
 		tft.setTextSize(2);
 		tft.setCursor(0, 20); // Start at top-left corner
 		tft.setTextColor(ST77XX_GREEN);
-		sprintf(TX,"%3.3lf", Rrtd); //  XXX.XX
+		sprintf(TX,"%3.4lf", Rrtd); //  XXX.XX
 		//tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
 		tft.printf(TX);
 		tft.setTextSize(3);
@@ -151,17 +179,15 @@ void loop1()
 		tft.printf(TX);
 
 		
-		double internalTemp = analogReadTemp();
-		tft.setTextSize(3);
-		tft.setCursor(0, 40); // Start at top-left corner
-		tft.setTextColor(ST77XX_RED);
-		sprintf(TX,"%2.1lf", internalTemp); //  XXX.XX
-		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
-		tft.setCursor(0, 60); // Start at top-left corner
-		tft.printf(TX);
+		/** 
+		 * La lecture de la t°C interne du rasp est lié a Vcc = 3v3
+		 * dont il faut une alim précise ou un vref externe pour que ça fonctionne correctement
+		 * et la résolution est plutot faible
+		*/
+		//double internalTemp = analogReadTemp();
+		
 
-		// Serial.print(";");
-		// Serial.println(millis()/1000);
+
 	}
 }
 
