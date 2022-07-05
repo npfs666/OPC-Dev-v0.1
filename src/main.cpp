@@ -30,6 +30,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_ST7789.h>
 #include "pico/stdlib.h"
+#include "hardware/timer.h"
 
 
 // Ecran SPI OLED
@@ -43,9 +44,7 @@ Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, OLED_CS, OLED_DC, OLED_RESET);
 
 void rotencInterrupt();
 void adcInterrupt();
-void printScreen(double_t temp);
 
-double_t G_Temperature;
 ADC adc;
 
 const double rtdInterpol[] = {-500.00, 
@@ -94,43 +93,49 @@ void setup1()
  * @brief
  *
  */
+//uint32_t  start = to_us_since_boot(get_absolute_time());
+//uint32_t  temps = to_us_since_boot(get_absolute_time()) - start;
+//Serial.println(temps);
 void loop1()
 {
 
 	if (adc.rtd.newMeasure)
 	{
-		// lecture de la dernière valeur
+		// lecture de la dernière série de valeurs
 		double_t res = adc.rtd.readValue();
 
 		// Application de l'erreur PGA
 		// res += 1;
 
+		// Conversion de la valeur numérique en résistance (Ohm)
 		// Rref (@21°c) = 1649.797
-		// Rref (@18°c) = 1650.56 (ancienne cal)
-		double_t Rrtd = (res * 1650.316) / (32767 * 8.0);
-
-		double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
-
-		// double temp = (Rrtd-calib0CRTD)/0.385;	// Approximation linéaire de la T°C
+		// Rref (@18°c) = 1650.56 (ancienne cal)		
+		double_t Rrtd = (res * 1650.316) / (32767 * (double_t)adc.getGain());
+		
+		// Application d'un offset de T°C
+		//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
+	
+		// Approximation linéaire de la T°C
+		// double temp = (Rrtd-calib0CRTD)/0.385;
 		double_t temp = -244.83 + Rrtd * (2.3419 + 0.0010664 * Rrtd);
 
-		G_Temperature = temp;
-
-
-		// Test interpolation
-		int16_t index=(int) (Rrtd/10);
-		double frac = (double)(Rrtd/10.0) - index;
-		double a = rtdInterpol[index];
-		double tempInter = 0;
-
-		if (index==Rrtd/10) {
-		tempInter = rtdInterpol[index];
+		// Conversion de la résistance d'une RTD en température via la méthode d'interpolation
+		int16_t index=(int16_t) (Rrtd/10);
+		double_t frac = (double_t)(Rrtd/10.0) - index;
+		double_t a = rtdInterpol[index];
+		double_t tempInter = 0;
+		// Si valeur juste, on lis la case directement
+		if (index == Rrtd / 10)
+		{
+			tempInter = rtdInterpol[index];
 		}
-		
-		double b=rtdInterpol[index+1]/2.0;
-		double c=rtdInterpol[index-1]/2.0;
-		tempInter=(double)a + frac*(b-c + frac*(c+b-a));
+		// Sinon approximation par interpolation du des valeurs du tableau
+		double_t b = rtdInterpol[index + 1] / 2.0;
+		double_t c = rtdInterpol[index - 1] / 2.0;
+		tempInter = (double_t)a + frac * (b - c + frac * (c + b - a));
 
+		
+		
 
 		Serial.print((String)res + " ; ");
 		Serial.print(Rrtd, 4);
@@ -200,17 +205,12 @@ void adcInterrupt()
 {
 	int val = adc.ads1120.readADC();
 	adc.rtd.add(val);
-	// Serial.println(val);
 
-	// If 3 wire, chopp the current sources
+	// Cas particulier de la mesure en 3 fils (current chopping) : 
+	// inversion des sources d'exitation de courant à la moitié de la série, pour supprimer leur inégalité de courant
 	if ((adc.rtd.type == TYPE_3WIRE) && (adc.rtd.sampleCount == (adc.rtd.samples / 2)) && (adc.rtd.samples % 2 == 0))
 	{
-		// Serial.println(adc.rtd.sum);
-		// adc.ads1120.startSync();
 		adc.invert3WireIDAC();
-		// adc.ads1120.startSync();
-		// Serial.println("inversion");
-		// adc.ads1120.startSync();
 	}
 
 	// If all samples are measured, compute the result
@@ -220,10 +220,7 @@ void adcInterrupt()
 
 		if (adc.rtd.type == TYPE_3WIRE)
 		{
-			// adc.ads1120.startSync();
 			adc.set3WireIDAC();
-			// adc.ads1120.startSync();
-			// adc.ads1120.startSync();
 		}
 	}
 }
@@ -235,55 +232,5 @@ void adcInterrupt()
  */
 void loop()
 {
-	// One shot
-	/*adc.setIDACcurrent(6);
-	delay(1000);
-	int val = adc.readADC_Single();
-	Serial.println(val);
-	adc.setIDACcurrent(0);*/
 
-	// Serial.print("Internal temp  : ");
-	// Serial.println(adc.readInternalTemp(), 1);
-
-	// delay(1000);
-	// Serial.println("okok");
-
-	/*if (adc.rtd.newMeasure)
-	{
-		// lecture de la dernière valeur
-		double_t res = adc.rtd.readValue();
-
-		// Application de l'erreur PGA
-		// res += 1;
-
-		double_t Rrtd = (res * 1650.56) / (32767 * 8.0);
-
-		double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
-
-		// double temp = (Rrtd-calib0CRTD)/0.385;	// Approximation linéaire de la T°C
-		double_t temp = -244.83 + Rrtd * (2.3419 + 0.0010664 * Rrtd);
-
-		G_Temperature = temp;
-		Serial.print((String)res + " ; ");
-		Serial.print(Rrtd, 3);
-		Serial.print(" ; ");
-		Serial.println(temp, 3);
-
-		// Serial.print(";");
-		// Serial.println(millis()/1000);
-	}*/
 }
-
-/*void printScreen(double_t temp)
-{
-	display.clearDisplay();
-
-	display.setTextSize(3);				 // Normal 1:1 pixel scale
-	display.setTextColor(SSD1306_WHITE); // Draw white text
-	display.setCursor(0, 30);			 // Start at top-left corner
-	display.cp437(true);				 // Use full 256 char 'Code Page 437' font
-
-	// double_t temp = 100.13;
-	display.printf("%3.3lf", temp);
-	display.display();
-}*/

@@ -257,6 +257,7 @@ void ADS1120::setGain(uint8_t gain)
   writeRegisterMasked(value, REG_MASK_GAIN, CONFIG_REG0_ADDRESS);
 }
 
+
 void ADS1120::setPGAbypass(bool value)
 {
   /* Bypasses the PGA if true.

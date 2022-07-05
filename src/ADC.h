@@ -26,12 +26,14 @@ class RTDSensor {
     void add(int32_t value);
     void compute();
     double_t readValue();
+    
 };
 
 class ADC {
   public:
     ADS1120 ads1120;
     RTDSensor rtd;
+    uint8_t gain;
 
     ADC();
     void init(uint8_t type, uint16_t samples);
@@ -43,6 +45,7 @@ class ADC {
     void setTempCalibration();
     void calRefResistor(unsigned int resistanceValue);
     void calTempProbe(float offset);
+    uint8_t getGain();
     //void interruptADC();
   };
 #endif

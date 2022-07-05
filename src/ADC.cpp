@@ -2,7 +2,7 @@
 #include "SPI.h"
 #include "Arduino.h"
 
-//void interruptADC(ADC *t);
+
 
 RTDSensor::RTDSensor() {
     reset();
@@ -32,6 +32,7 @@ double_t RTDSensor::readValue()
 ADC::ADC()
 {
     rtd.reset();
+    gain=0;
 }
 /**
  * @brief 
@@ -43,7 +44,6 @@ void ADC::init(uint8_t type, uint16_t samples)
 {
     rtd.type = type;
     rtd.samples = samples;
-
     ads1120.begin(SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS, SPI_DRDY);
 }
 /**
@@ -60,6 +60,7 @@ void ADC::set4WirePT100()
     //ads1120.setIDAC2routing(IDAC_AIN3_REFN1);
     ads1120.setIDACcurrent(CURRENT_1000_UA);
     ads1120.setGain(8);
+    gain=8;
 }
 /**
  * @brief Configures the ADC to measure a 3-Wire RTD
@@ -71,10 +72,9 @@ void ADC::set3WirePT100()
     ads1120.setMultiplexer(MUX_AINP_AIN0_AINN_AIN1);
     ads1120.setFIR(FIR_50HZ);
     ads1120.setVoltageRef(VREF_EXTERNAL_REFP0_REFN0);
-
     ads1120.setIDACcurrent(CURRENT_500_UA);
     ads1120.setGain(16);
-
+    gain=16;
     //set3WireIDAC();
 }
 void ADC::set3WireIDAC()
@@ -108,7 +108,10 @@ void ADC::calTempProbe(float offset)
 {
 }
 
-
+uint8_t ADC::getGain()
+{
+    return gain;
+}
 
 
 /*
