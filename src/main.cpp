@@ -30,7 +30,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_ST7789.h>
 #include "pico/stdlib.h"
-#include "hardware/timer.h"
+//#include "hardware/timer.h"
 
 
 // Ecran SPI OLED
@@ -110,7 +110,7 @@ void loop1()
 		// Conversion de la valeur numérique en résistance (Ohm)
 		// Rref (@21°c) = 1649.797
 		// Rref (@18°c) = 1650.56 (ancienne cal)		
-		double_t Rrtd = (res * 1650.316) / (32767 * (double_t)adc.getGain());
+		double_t Rrtd = (res * 1649.96) / (32767 * (double_t)adc.getGain());
 		
 		// Application d'un offset de T°C
 		//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
