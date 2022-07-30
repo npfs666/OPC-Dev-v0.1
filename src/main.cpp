@@ -33,16 +33,28 @@
 //#include "hardware/timer.h"
 
 
-// Ecran SPI OLED
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_DC 7
-#define OLED_CS 13
-#define OLED_RESET 9
-// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,&SPI1, OLED_DC, OLED_RESET, OLED_CS);
-Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, OLED_CS, OLED_DC, OLED_RESET);
+// Ecran SPI TFT
+#define LCD_SCK 14
+#define LCD_MOSI 15
+#define LCD_DC 12
+#define LCD_CS 13
+#define LCD_RESET 11
+Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
+
+// Encodeur rotatif
+#define ROTENC_A 26
+#define ROTENC_B 22
+#define ROTENC_CLIC 21
+
+// Analog switches
+#define SW_3_WIRE 28
+#define SW_4_WIRE 27
+#define SW_MUX_1 2
+#define SW_MUX_2 1
+#define SW_MUX_3 0
 
 void rotencInterrupt();
+void rotencInterruptClic();
 void adcInterrupt();
 
 ADC adc;
@@ -58,6 +70,17 @@ void setup()
 	Serial.begin(115200);
 	Serial.println("Open Process Controller");
 
+	// Configuration des pins de commandes des analog switches
+	pinMode(SW_3_WIRE, OUTPUT);
+	pinMode(SW_4_WIRE, OUTPUT);
+	pinMode(SW_MUX_1, OUTPUT);
+	pinMode(SW_MUX_2, OUTPUT);
+	pinMode(SW_MUX_3, OUTPUT);
+
+	digitalWrite(SW_4_WIRE, HIGH);
+	digitalWrite(SW_MUX_1, HIGH);
+	delay(20);
+
 	/*adc.init(TYPE_3WIRE, 64);
 	adc.set3WirePT100();
 	adc.set3WireIDAC();*/
@@ -69,23 +92,26 @@ void setup()
 void setup1()
 {
 	delay(2000);
-	pinMode(14, INPUT);
-	pinMode(15, INPUT);
-	attachInterrupt(digitalPinToInterrupt(14), rotencInterrupt, FALLING);
 
-	SPI1.setSCK(10);
-	SPI1.setTX(11);
-	
-	
+	// Configuration de l'encodeur rotatif
+	pinMode(ROTENC_A, INPUT);
+	pinMode(ROTENC_B, INPUT);
+	attachInterrupt(digitalPinToInterrupt(ROTENC_A), rotencInterrupt, FALLING);
+	attachInterrupt(digitalPinToInterrupt(ROTENC_CLIC), rotencInterruptClic, FALLING);
 
-	// SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-	/*if(!display.begin(SSD1306_SWITCHCAPVCC)) {
-		Serial.println(F("SSD1306 allocation failed"));
-		for(;;); // Don't proceed, loop forever
-	}*/
+	// Configuration du SPI de l'écran
+	SPI1.setSCK(LCD_SCK);
+	SPI1.setTX(LCD_MOSI);
 	tft.init(135, 240); // Init ST7789 240x240
-	tft.setRotation(1);
+	tft.setRotation(3);
 	tft.fillScreen(ST77XX_BLACK);
+
+	// Test initial
+	/*tft.setTextColor(ST77XX_WHITE); // Draw white text
+	tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
+	tft.setTextSize(2);
+	tft.setCursor(0, 0); // Start at top-left corner
+	tft.printf("Consigne");*/
 }
 
 /**
@@ -110,7 +136,7 @@ void loop1()
 		// Conversion de la valeur numérique en résistance (Ohm)
 		// Rref (@21°c) = 1649.797
 		// Rref (@18°c) = 1650.56 (ancienne cal)		
-		double_t Rrtd = (res * 1649.96) / (32767 * (double_t)adc.getGain());
+		double_t Rrtd = (res * 1649.735) / (32767 * (double_t)adc.getGain());
 		
 		// Application d'un offset de T°C
 		//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
@@ -145,21 +171,6 @@ void loop1()
 		Serial.println(tempInter, 4);
 
 
-		// Ancien code OLED
-		/*display.clearDisplay();
-		display.setTextSize(3);				 // Normal 1:1 pixel scale
-		display.setTextColor(SSD1306_WHITE); // Draw white text
-		display.cp437(true);				 // Use full 256 char 'Code Page 437' font
-		display.setTextSize(2);
-		display.setCursor(0, 0); // Start at top-left corner
-		display.printf("Consigne");
-		display.setTextSize(2);
-		display.setCursor(0, 20); // Start at top-left corner
-		display.printf("%3.3lf", Rrtd);
-		display.setTextSize(3);
-		display.setCursor(0, 40); // Start at top-left corner
-		display.printf("%3.3lf", temp);
-		display.display();*/
 		char TX[50];
 		tft.fillScreen(ST77XX_BLACK);
 		tft.setTextSize(3);				 // Normal 1:1 pixel scale
@@ -198,7 +209,14 @@ void loop1()
 
 void rotencInterrupt(void)
 {
-	Serial.println(digitalRead(15));
+	//delayMicroseconds(10);
+	PinStatus b = digitalRead(ROTENC_B);
+	Serial.println(b);
+}
+
+void rotencInterruptClic(void) {
+
+	Serial.println("Click");
 }
 
 void adcInterrupt()

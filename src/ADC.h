@@ -7,7 +7,7 @@
 #define SPI_MISO 16
 #define SPI_MOSI 19
 #define SPI_CS   17
-#define SPI_DRDY 8
+#define SPI_DRDY 20
 
 class RTDSensor {
 
