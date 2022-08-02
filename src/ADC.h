@@ -42,6 +42,8 @@ class ADC {
     void set3WireIDAC();
     void invert3WireIDAC();
     void startContinuous(voidFuncPtr itFunction);
+    void stop();
+    void restart();
     void setTempCalibration();
     void calRefResistor(unsigned int resistanceValue);
     void calTempProbe(float offset);

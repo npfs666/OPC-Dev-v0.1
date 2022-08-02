@@ -98,6 +98,16 @@ void ADC::startContinuous(voidFuncPtr itFunction)
     attachInterrupt(digitalPinToInterrupt(SPI_DRDY), itFunction, FALLING);
     ads1120.startSync();
 }
+
+void ADC::stop() {
+    ads1120.setConversionMode(CONVERSION_SINGLE_SHOT);
+}
+
+void ADC::restart() {
+    ads1120.setConversionMode(CONVERSION_CONTINUOUS);
+    ads1120.startSync();
+}
+
 void ADC::setTempCalibration()
 {
 }

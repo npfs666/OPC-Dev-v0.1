@@ -30,6 +30,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_ST7789.h>
 #include "pico/stdlib.h"
+#include <math.h>
 //#include "hardware/timer.h"
 
 
@@ -58,6 +59,8 @@ void rotencInterruptClic();
 void adcInterrupt();
 
 ADC adc;
+bool mux_1 = true;
+double_t mes1=1, mes2=1;
 
 const double rtdInterpol[] = {-500.00, 
 							-219.415, -196.509, -173.118, -149.304, -125.122, -100.617, -75.827, -50.781, -25.501, 0.000,
@@ -79,6 +82,7 @@ void setup()
 
 	digitalWrite(SW_4_WIRE, HIGH);
 	digitalWrite(SW_MUX_1, HIGH);
+	mux_1 = true;
 	delay(20);
 
 	/*adc.init(TYPE_3WIRE, 64);
@@ -128,7 +132,56 @@ void loop1()
 	if (adc.rtd.newMeasure)
 	{
 		// lecture de la dernière série de valeurs
-		double_t res = adc.rtd.readValue();
+		double_t Rrtd = 0;
+		double_t tempInter = 0;
+
+		if( !mux_1 ) {
+			mes2 = adc.rtd.readValue();
+			
+			Rrtd = (mes2 * 1649.735) / (32767 * (double_t)adc.getGain());
+		
+			// Application d'un offset de T°C
+			//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
+
+			// Conversion de la résistance d'une RTD en température via la méthode d'interpolation
+			int16_t index=(int16_t) (Rrtd/10);
+			double_t frac = (double_t)(Rrtd/10.0) - index;
+			double_t a = rtdInterpol[index];
+
+			// Si valeur juste, on lis la case directement
+			if (index == Rrtd / 10)
+			{
+				tempInter = rtdInterpol[index];
+			}
+			// Sinon approximation par interpolation du des valeurs du tableau
+			double_t b = rtdInterpol[index + 1] / 2.0;
+			double_t c = rtdInterpol[index - 1] / 2.0;
+			mes2 = (double_t)a + frac * (b - c + frac * (c + b - a));
+			mes2 += 0.3;
+		} else {
+			mes1 = adc.rtd.readValue();
+
+			Rrtd = (mes1 * 1649.735) / (32767 * (double_t)adc.getGain());
+		
+			// Application d'un offset de T°C
+			//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
+
+			// Conversion de la résistance d'une RTD en température via la méthode d'interpolation
+			int16_t index=(int16_t) (Rrtd/10);
+			double_t frac = (double_t)(Rrtd/10.0) - index;
+			double_t a = rtdInterpol[index];
+			
+			// Si valeur juste, on lis la case directement
+			if (index == Rrtd / 10)
+			{
+				tempInter = rtdInterpol[index];
+			}
+			// Sinon approximation par interpolation du des valeurs du tableau
+			double_t b = rtdInterpol[index + 1] / 2.0;
+			double_t c = rtdInterpol[index - 1] / 2.0;
+			mes1 = (double_t)a + frac * (b - c + frac * (c + b - a));
+		}
+		//double_t res = 
 
 		// Application de l'erreur PGA
 		// res += 1;
@@ -136,41 +189,16 @@ void loop1()
 		// Conversion de la valeur numérique en résistance (Ohm)
 		// Rref (@21°c) = 1649.797
 		// Rref (@18°c) = 1650.56 (ancienne cal)		
-		double_t Rrtd = (res * 1649.735) / (32767 * (double_t)adc.getGain());
-		
-		// Application d'un offset de T°C
-		//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
 	
-		// Approximation linéaire de la T°C
-		// double temp = (Rrtd-calib0CRTD)/0.385;
-		double_t temp = -244.83 + Rrtd * (2.3419 + 0.0010664 * Rrtd);
 
-		// Conversion de la résistance d'une RTD en température via la méthode d'interpolation
-		int16_t index=(int16_t) (Rrtd/10);
-		double_t frac = (double_t)(Rrtd/10.0) - index;
-		double_t a = rtdInterpol[index];
-		double_t tempInter = 0;
-		// Si valeur juste, on lis la case directement
-		if (index == Rrtd / 10)
-		{
-			tempInter = rtdInterpol[index];
-		}
-		// Sinon approximation par interpolation du des valeurs du tableau
-		double_t b = rtdInterpol[index + 1] / 2.0;
-		double_t c = rtdInterpol[index - 1] / 2.0;
-		tempInter = (double_t)a + frac * (b - c + frac * (c + b - a));
-
+		// Envoi sur le port série
 		
-		
-
-		Serial.print((String)res + " ; ");
+		Serial.print((String)mes1 + " ; ");
 		Serial.print(Rrtd, 4);
-		Serial.print(" ; ");
-		Serial.print(temp, 4);
 		Serial.print(" ; ");
 		Serial.println(tempInter, 4);
 
-
+		// Affichage écran
 		char TX[50];
 		tft.fillScreen(ST77XX_BLACK);
 		tft.setTextSize(3);				 // Normal 1:1 pixel scale
@@ -182,16 +210,29 @@ void loop1()
 		tft.setTextSize(2);
 		tft.setCursor(0, 20); // Start at top-left corner
 		tft.setTextColor(ST77XX_GREEN);
-		sprintf(TX,"%3.4lf", Rrtd); //  XXX.XX
+		sprintf(TX,"%3.3lf", mes1); //  XXX.XX
 		//tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
 		tft.printf(TX);
-		tft.setTextSize(3);
+		tft.setTextSize(2);
 		tft.setCursor(0, 40); // Start at top-left corner
-		tft.setTextColor(ST77XX_RED);
-		sprintf(TX,"%3.3lf", temp); //  XXX.XX
+		tft.setTextColor(ST77XX_GREEN);
+		sprintf(TX,"%3.3lf", mes2); //  XXX.XX
 		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
-		
 		tft.setCursor(0, 40); // Start at top-left corner
+		tft.printf(TX);
+
+		
+		double_t pVs = pow(10,(2.7877+(7.625*mes1)/(241.6+mes1)));
+		double_t pV = pVs - 0.00066*101300*(mes2-mes1);
+		double_t pVs2 = pow(10,(2.7877+(7.625*mes2)/(241.6+mes2)));
+		double_t rh = ((double_t)pV/pVs2)*100.0;
+
+		tft.setTextSize(3);
+		tft.setCursor(0, 60); // Start at top-left corner
+		tft.setTextColor(ST77XX_RED);
+		sprintf(TX,"%3.3lf", rh); //  XXX.XX
+		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
+		tft.setCursor(0, 70); // Start at top-left corner
 		tft.printf(TX);
 
 		
@@ -235,6 +276,19 @@ void adcInterrupt()
 	if (adc.rtd.sampleCount == adc.rtd.samples)
 	{
 		adc.rtd.compute();
+
+		adc.stop();
+		if( mux_1 ) {
+			digitalWrite(SW_MUX_2, HIGH);
+			digitalWrite(SW_MUX_1, LOW);
+			mux_1 = false;
+		} else {
+			digitalWrite(SW_MUX_1, HIGH);
+			digitalWrite(SW_MUX_2, LOW);
+			mux_1 = true;
+		}
+		delay(10);
+		adc.restart();
 
 		if (adc.rtd.type == TYPE_3WIRE)
 		{
