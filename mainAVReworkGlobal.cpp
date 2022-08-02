@@ -48,8 +48,8 @@ Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
 #define ROTENC_CLIC 21
 
 // Analog switches
-//#define SW_3_WIRE 28
-//#define SW_4_WIRE 27
+#define SW_3_WIRE 28
+#define SW_4_WIRE 27
 #define SW_MUX_1 2
 #define SW_MUX_2 1
 #define SW_MUX_3 0
@@ -59,6 +59,12 @@ void rotencInterruptClic();
 void adcInterrupt();
 
 ADC adc;
+bool mux_1 = true;
+double_t mes1=1, mes2=1;
+
+const double rtdInterpol[] = {-500.00, 
+							-219.415, -196.509, -173.118, -149.304, -125.122, -100.617, -75.827, -50.781, -25.501, 0.000,
+							  25.686, 51.571, 77.660, 103.958, 130.469, 157.198, 184.152, 211.336, 238.756, 266.419};
 
 
 void setup()
@@ -74,11 +80,17 @@ void setup()
 	pinMode(SW_MUX_2, OUTPUT);
 	pinMode(SW_MUX_3, OUTPUT);
 
-	adc.init();
-	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0);
-	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0);
-	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
-	adc.startContinuous();
+	digitalWrite(SW_4_WIRE, HIGH);
+	digitalWrite(SW_MUX_1, HIGH);
+	mux_1 = true;
+	delay(20);
+
+
+	adc.init(64);
+	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 0);
+	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 0);
+	
+	//adc.startContinuous(adcInterrupt);
 }
 
 void setup1()
@@ -97,6 +109,13 @@ void setup1()
 	tft.init(135, 240); // Init ST7789 240x240
 	tft.setRotation(3);
 	tft.fillScreen(ST77XX_BLACK);
+
+	// Test initial
+	/*tft.setTextColor(ST77XX_WHITE); // Draw white text
+	tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
+	tft.setTextSize(2);
+	tft.setCursor(0, 0); // Start at top-left corner
+	tft.printf("Consigne");*/
 }
 
 /**
@@ -109,26 +128,79 @@ void setup1()
 //Serial.println(temps);
 void loop1()
 {
-
-	if (adc.newMeasurement)
+	//ICI
+	//if (adc.rtd.newMeasure)
 	{
 		// lecture de la dernière série de valeurs
-		// Lire toutes les valeurs de resistances directement en liste, conversion en t° ensuite (long en calcul)
-		double_t rtd1 = adc.getResistanceValue(0);
-		double_t rtd2 = adc.getResistanceValue(1);
-		adc.newMeasurement = false;
-	
-		double_t mes1, mes2;
+		double_t Rrtd = 0;
+		double_t tempInter = 0;
 
-		mes1 = adc.getRTDTempInterpolation(rtd1);
-		mes2 = adc.getRTDTempInterpolation(rtd2);
+		if( !mux_1 ) {
+			//ICI
+			//mes2 = adc.rtd.readValue();
+			
+			//ICI
+			//Rrtd = (mes2 * 1649.735) / (32767 * (double_t)adc.getGain());
+		
+			// Application d'un offset de T°C
+			//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
+
+			// Conversion de la résistance d'une RTD en température via la méthode d'interpolation
+			int16_t index=(int16_t) (Rrtd/10);
+			double_t frac = (double_t)(Rrtd/10.0) - index;
+			double_t a = rtdInterpol[index];
+
+			// Si valeur juste, on lis la case directement
+			if (index == Rrtd / 10)
+			{
+				tempInter = rtdInterpol[index];
+			}
+			// Sinon approximation par interpolation du des valeurs du tableau
+			double_t b = rtdInterpol[index + 1] / 2.0;
+			double_t c = rtdInterpol[index - 1] / 2.0;
+			mes2 = (double_t)a + frac * (b - c + frac * (c + b - a));
+			mes2 += 0.3;
+		} else {
+			//ICI
+			//mes1 = adc.rtd.readValue();
+			
+			// ICI
+			//Rrtd = (mes1 * 1649.735) / (32767 * (double_t)adc.getGain());
+		
+			// Application d'un offset de T°C
+			//double_t calib0CRTD = 100.04; // Valeur de la resistance @ 0°C
+
+			// Conversion de la résistance d'une RTD en température via la méthode d'interpolation
+			int16_t index=(int16_t) (Rrtd/10);
+			double_t frac = (double_t)(Rrtd/10.0) - index;
+			double_t a = rtdInterpol[index];
+			
+			// Si valeur juste, on lis la case directement
+			if (index == Rrtd / 10)
+			{
+				tempInter = rtdInterpol[index];
+			}
+			// Sinon approximation par interpolation du des valeurs du tableau
+			double_t b = rtdInterpol[index + 1] / 2.0;
+			double_t c = rtdInterpol[index - 1] / 2.0;
+			mes1 = (double_t)a + frac * (b - c + frac * (c + b - a));
+		}
+		//double_t res = 
+
+		// Application de l'erreur PGA
+		// res += 1;
+
+		// Conversion de la valeur numérique en résistance (Ohm)
+		// Rref (@21°c) = 1649.797
+		// Rref (@18°c) = 1650.56 (ancienne cal)		
+	
 
 		// Envoi sur le port série
-		//Serial.print((String)mes1 + " ; ");
-		Serial.print(rtd1, 4);
+		
+		Serial.print((String)mes1 + " ; ");
+		Serial.print(Rrtd, 4);
 		Serial.print(" ; ");
-		Serial.println(rtd2, 4);
-		//Serial.println(tempInter, 4);
+		Serial.println(tempInter, 4);
 
 		// Affichage écran
 		char TX[50];
@@ -192,7 +264,43 @@ void rotencInterruptClic(void) {
 	Serial.println("Click");
 }
 
+void adcInterrupt()
+{
+	//ICI
+	/*int val = adc.ads1120.readADC();
+	adc.rtd.add(val);
 
+	// Cas particulier de la mesure en 3 fils (current chopping) : 
+	// inversion des sources d'exitation de courant à la moitié de la série, pour supprimer leur inégalité de courant
+	if ((adc.rtd.type == TYPE_3WIRE) && (adc.rtd.sampleCount == (adc.rtd.samples / 2)) && (adc.rtd.samples % 2 == 0))
+	{
+		adc.invert3WireIDAC();
+	}
+
+	// If all samples are measured, compute the result
+	if (adc.rtd.sampleCount == adc.rtd.samples)
+	{
+		adc.rtd.compute();
+
+		adc.stop();
+		if( mux_1 ) {
+			digitalWrite(SW_MUX_2, HIGH);
+			digitalWrite(SW_MUX_1, LOW);
+			mux_1 = false;
+		} else {
+			digitalWrite(SW_MUX_1, HIGH);
+			digitalWrite(SW_MUX_2, LOW);
+			mux_1 = true;
+		}
+		delay(10);
+		adc.restart();
+
+		if (adc.rtd.type == TYPE_3WIRE)
+		{
+			adc.set3WireIDAC();
+		}
+	}*/
+}
 
 /**
  * CPU0 : contrôle de la mesure ADC et de la régulation
@@ -201,60 +309,5 @@ void rotencInterruptClic(void) {
  */
 void loop()
 {
-
-}
-
-
-
-
-
-
-
-
-void adcInterrupt() {
-
-    int value = adc.ads1120.readADC();
-
-    adc.rtd[adc.curRTDSensor].add(value);
-
-    // Cas particulier de la mesure en 3 fils (current chopping) : 
-	// inversion des sources d'exitation de courant à la moitié de la série, pour supprimer leur inégalité de courant
-	if ((adc.rtd[adc.curRTDSensor].measurementType == TYPE_3WIRE) 
-        && (adc.rtd[adc.curRTDSensor].sampleCount == (adc.rtd[adc.curRTDSensor].samples / 2)) 
-        && (adc.rtd[adc.curRTDSensor].samples % 2 == 0) )
-	{
-		adc.invert3WireIDAC();
-	}
-
-    // If all samples are measured, compute the result
-    if (adc.rtd[adc.curRTDSensor].sampleCount == adc.rtd[adc.curRTDSensor].samples)
-	{
-        adc.stop();
-
-		adc.rtd[adc.curRTDSensor].compute();
-
-        digitalWrite(adc.rtd[adc.curRTDSensor].analogSwitchPin, LOW);
-		adc.curRTDSensor++;
-
-        // Fin de la boucle de mesure on recommence
-        if( adc.curRTDSensor == adc.numRTDSensors ) {
-            adc.curRTDSensor = 0;
-			adc.newMeasurement = true;
-        }
-
-        // Allumage de l'analog switch concerné par la conversion
-        digitalWrite(adc.rtd[adc.curRTDSensor].analogSwitchPin, HIGH);
-
-        // Initialisation du type de mesure
-        if (adc.rtd[adc.curRTDSensor].measurementType == TYPE_3WIRE) {
-			adc.set3WirePT100();
-		} else if(adc.rtd[adc.curRTDSensor].measurementType == TYPE_4WIRE) {
-            adc.set4WirePT100();
-        }
-
-        // Pause et relance de la conversion continue
-		delay(1);
-		adc.restart();
-    }
 
 }
