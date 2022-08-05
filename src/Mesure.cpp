@@ -6,8 +6,8 @@
 
 
 RTDSensor::RTDSensor() {
-
 }
+
 RTDSensor::RTDSensor(uint8_t type, uint8_t switchPin, uint16_t samples, int16_t offset) {
 
     this->measurementType = type;
@@ -115,13 +115,12 @@ void ADC::startContinuous()
     digitalWrite(rtd[this->curRTDSensor].analogSwitchPin, HIGH);
     if (rtd[this->curRTDSensor].measurementType == TYPE_3WIRE) {
         set3WirePT100();
-    } else if(rtd[curRTDSensor].measurementType == TYPE_4WIRE) {
+    } else if(rtd[this->curRTDSensor].measurementType == TYPE_4WIRE) {
         set4WirePT100();
     }
 
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
-    ads1120.setDataRate(DATARATE_45_SPS);
-    
+    ads1120.setDataRate(DATARATE_90_SPS);
     ads1120.startSync();
 }
 
@@ -144,7 +143,7 @@ double_t ADC::getResistanceValue(uint8_t rtdSensor) {
 
     double_t gain = 1;
     if( rtd[rtdSensor].measurementType == TYPE_3WIRE ) {
-        gain = 16.0;
+        gain = 8.0;
     } else if (rtd[rtdSensor].measurementType == TYPE_4WIRE ) {
         gain = 8.0;
     }

@@ -142,13 +142,13 @@ void loop1()
 		tft.setTextSize(2);
 		tft.setCursor(0, 20); // Start at top-left corner
 		tft.setTextColor(ST77XX_GREEN);
-		sprintf(TX,"%3.3lf", mes1); //  XXX.XX
+		sprintf(TX,"%3.3lf %3.3lf", mes1, rtd1); //  XXX.XX
 		//tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
 		tft.printf(TX);
 		tft.setTextSize(2);
 		tft.setCursor(0, 40); // Start at top-left corner
 		tft.setTextColor(ST77XX_GREEN);
-		sprintf(TX,"%3.3lf", mes2); //  XXX.XX
+		sprintf(TX,"%3.3lf %3.3lf", mes2, rtd2); //  XXX.XX
 		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
 		tft.setCursor(0, 40); // Start at top-left corner
 		tft.printf(TX);
