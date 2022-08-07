@@ -120,7 +120,7 @@ void ADC::startContinuous()
     }
 
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
-    ads1120.setDataRate(DATARATE_90_SPS);
+    ads1120.setDataRate(DATARATE_45_SPS);
     ads1120.startSync();
 }
 
@@ -174,5 +174,38 @@ double_t ADC::getRTDTempInterpolation(double_t Rrtd) {
     temperature = (double_t)a + frac * (b - c + frac * (c + b - a));
 
     return temperature;
+}
+
+/**
+ * @brief Calcule l'humidité relative à partir d'une température sèche et humide
+ * 
+ * @param tempSeche température de la sonde sèche
+ * @param tempHumide température du bulbe humide
+ * @return double_t Humidité relative en %
+ */
+double_t getRH(double_t tempSeche, double_t tempHumide) {
+
+    // 1: Calcul de la "constante" psychrométrique
+    // Capacité thermique massique de l'air [kJ/kg.°C]
+    double_t Cp = 0.00006 * tempSeche + 1.005;
+    // Energie de vaporiation de l'eau [kJ/kg]
+    double_t lambda = -2.3664 * tempSeche + 2501;
+    double_t A = Cp / (lambda * 0.622 );
+
+    // Pression athmosphérique [kPa]
+    double_t P = 102.220;
+
+    double_t pVs = 0.6108 * pow(2.71828, ((17.27 * tempHumide)/(tempHumide + 237.3))); // [kPa]
+    double_t pV = pVs - A*P*(tempSeche-tempHumide); // [kPa]
+    double_t pVs2 = 0.6108 * pow(2.71828, ((17.27 * tempSeche)/(tempSeche + 237.3))); // [kPa]
+
+    // Ancien calcul
+    //double_t pVs = pow(10,(2.7877+(7.625*mes1)/(241.6+mes1)));
+    //double_t pV = pVs - 0.000667*102.3000*(mes2-mes1);
+    //double_t pVs2 = pow(10,(2.7877+(7.625*mes2)/(241.6+mes2)));
+
+    double_t rh = ((double_t)pV/pVs2)*100.0;
+
+    return rh;
 }
 

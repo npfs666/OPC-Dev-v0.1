@@ -61,9 +61,11 @@ class ADC {
     void stop();
     void restart();
     void calRefResistor(double_t resistanceValue);
+    double_t getRH(double_t tempSeche, double_t tempHumide);
     double_t getResistanceValue(uint8_t value);
     double_t getRTDTempQuadratic(double_t rtd);
     double_t getRTDTempInterpolation(double_t rtd);
+    
 
     void set4WirePT100();
     void set3WirePT100();
