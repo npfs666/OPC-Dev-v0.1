@@ -1,6 +1,7 @@
 
 #include "SPI.h"
 #include "Arduino.h"
+#include <pinout.h>
 #include "Mesure.h"
 
 

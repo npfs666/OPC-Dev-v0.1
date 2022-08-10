@@ -3,15 +3,6 @@
 
 #include "ADS1120.h"
 
-#define SPI_CLK  18
-#define SPI_MISO 16
-#define SPI_MOSI 19
-#define SPI_CS   17
-#define SPI_DRDY 20
-
-#define SW_3_WIRE 28
-#define SW_4_WIRE 27
-
 const double rtdInterpol[] = {-500.00, 
 							-219.415, -196.509, -173.118, -149.304, -125.122, -100.617, -75.827, -50.781, -25.501, 0.000,
 							  25.686, 51.571, 77.660, 103.958, 130.469, 157.198, 184.152, 211.336, 238.756, 266.419};
@@ -29,7 +20,6 @@ class RTDSensor {
     int64_t sum;
     uint16_t samples, sampleCount;
     int16_t offset;
-    uint8_t gain;
 
     RTDSensor();
     RTDSensor(uint8_t measurementType, uint8_t analogSwitchPin, uint16_t samples, int16_t offset);

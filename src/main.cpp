@@ -3,7 +3,7 @@
  *
  *
  *
- * @author GAOU (you@domain.com)
+ * @author GAOU (arstaligtredan.fr)
  * @brief
  * @version 0.1
  * @date 2022-02-07
@@ -22,7 +22,7 @@
 //#include <Adafruit_TinyUSB.h>
 //#endif
  */
-
+#include <pinout.h>
 #include <SPI.h>
 #include <Mesure.h>
 #include <Wire.h>
@@ -35,26 +35,8 @@
 //#include "hardware/timer.h"
 
 
-// Ecran SPI TFT
-#define LCD_SCK 14
-#define LCD_MOSI 15
-#define LCD_DC 12
-#define LCD_CS 13
-#define LCD_RESET 11
+
 Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
-
-// Encodeur rotatif
-#define ROTENC_A 26
-#define ROTENC_B 22
-#define ROTENC_CLIC 21
-
-// Analog switches
-//#define SW_3_WIRE 28
-//#define SW_4_WIRE 27
-#define SW_MUX_1 2
-#define SW_MUX_2 1
-#define SW_MUX_3 0
-
 void rotencInterrupt();
 void rotencInterruptClic();
 void adcInterrupt();
@@ -157,29 +139,29 @@ void loop1()
 
 		// Affichage écran
 		char TX[50];
-		tft.fillScreen(ST77XX_BLACK);
+		//tft.fillScreen(ST77XX_BLACK);
 		tft.setTextSize(3);				 // Normal 1:1 pixel scale
-		tft.setTextColor(ST77XX_WHITE); // Draw white text
+		tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Draw white text
 		tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
 		tft.setTextSize(2);
 		tft.setCursor(0, 0); // Start at top-left corner
 		tft.printf("Consigne");
 		tft.setTextSize(2);
 		tft.setCursor(0, 20); // Start at top-left corner
-		tft.setTextColor(ST77XX_GREEN);
+		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
 		sprintf(TX,"%3.3lf %3.3lf", mes1, rtd1); //  XXX.XX
 		//tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
 		tft.printf(TX);
 		tft.setTextSize(2);
 		tft.setCursor(0, 40); // Start at top-left corner
-		tft.setTextColor(ST77XX_GREEN);
+		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
 		sprintf(TX,"%3.3lf %3.3lf", mes2, rtd2); //  XXX.XX
 		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
 		tft.setCursor(0, 40); // Start at top-left corner
 		tft.printf(TX);
 		tft.setTextSize(3);
 		tft.setCursor(0, 60); // Start at top-left corner
-		tft.setTextColor(ST77XX_RED);
+		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
 		sprintf(TX,"%3.3lf", rh); //  XXX.XX
 		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
 		tft.setCursor(0, 70); // Start at top-left corner
