@@ -32,84 +32,17 @@
 #include <Adafruit_BME280.h>
 #include "pico/stdlib.h"
 #include <math.h>
-#include <menu.h>
-#include <menuIO/adafruitGfxOut.h>
-#include <menuIO/keyIn.h>
-#include <menuIO/chainStream.h>
-#include <menuIO/serialOut.h>
-#include <menuIO/serialIn.h>
-//#include <menuIO/encoderIn.h>
-
-using namespace Menu;
-
-ADC adc;
-Regulation reg;
-
-#include "myMenu.h"
-
+//#include "hardware/timer.h"
 
 
 
 Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
-//void rotencInterrupt();
-//void rotencInterruptClic();
+void rotencInterrupt();
+void rotencInterruptClic();
 void adcInterrupt();
 double_t getHum(double_t tempSeche, double_t tempHumide, double_t pressionAtm);
+ADC adc;
 Adafruit_BME280 bme;
-
-// Déclaration des éléments du menu
-//serialIn serial(Serial);
-MENU_INPUTS(in);
-#define MAX_DEPTH 5
-MENU_OUTPUTS(out, MAX_DEPTH, 
-  ADAGFX_OUT(tft, colors, 12, 18, {0, 0, 20, 7}),
-  NONE);
-NAVROOT(nav, mainMenu, MAX_DEPTH, in, out);
-
-
-
-
-// Gestion de l'écran d'accueil/idle
-result idle(menuOut &o, idleEvent e)
-{
-  // Si on rentre en écran de base (lancer l'ADC par exemple)
-  if (e == idleStart) {
-	//adc.startContinuous();
-  }
-
-  // Retour dans la partie menu (couper l'ADC par ex)
-  if (e == idleEnd ) {
-	//adc.stop();
-  }
-
-  return proceed;
-}
-// Interruption du clic bouton
-void IsrButton(void)
-{
-  
-
-  /*if (!digitalRead(ROTARY_PIN_BUT)) {
-    nav.doNav(navCmds::escCmd);
-  } else {
-    nav.doNav(navCmds::enterCmd);
-  }*/
-  nav.doNav(navCmds::enterCmd);
-  delay(25);
-}
-// Interruption de l'encodeur rotatif
-void IsrRotenc(void)
-{
-  if (digitalRead(ROTENC_B))
-    nav.doNav(navCmds::upCmd);
-  else
-    nav.doNav(navCmds::downCmd);
-  
-  delay(10);
-}
-
-
-
 
 
 void setup()
@@ -126,8 +59,8 @@ void setup()
 	pinMode(SW_MUX_3, OUTPUT);
 
 	adc.init();
-	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.1);
-	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0.2);
+	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0);
+	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0);
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
 	adc.startContinuous();
 }
@@ -139,23 +72,15 @@ void setup1()
 	// Configuration de l'encodeur rotatif
 	pinMode(ROTENC_A, INPUT);
 	pinMode(ROTENC_B, INPUT);
-	pinMode(ROTENC_CLIC, INPUT);
-	attachInterrupt(digitalPinToInterrupt(ROTENC_A), IsrRotenc, FALLING);
-	attachInterrupt(digitalPinToInterrupt(ROTENC_CLIC), IsrButton, FALLING);
-
-	nav.idleTask = idle; // point a function to be used when menu is suspended
-  	nav.timeOut=10; //10sec
-	
+	attachInterrupt(digitalPinToInterrupt(ROTENC_A), rotencInterrupt, FALLING);
+	attachInterrupt(digitalPinToInterrupt(ROTENC_CLIC), rotencInterruptClic, FALLING);
 
 	// Configuration du SPI de l'écran
 	SPI1.setSCK(LCD_SCK);
 	SPI1.setTX(LCD_MOSI);
 	tft.init(135, 240); // Init ST7789 240x240
-	tft.setSPISpeed(48000000);
 	tft.setRotation(3);
-	tft.setTextSize(2);
-	tft.setTextWrap(false);
-	//tft.fillScreen(ST77XX_BLACK);
+	tft.fillScreen(ST77XX_BLACK);
 
 	// Configuration du BME280
 	Wire.setSCL(9);
@@ -171,9 +96,6 @@ void setup1()
         Serial.print("        ID of 0x61 represents a BME 680.\n");
         while (1) delay(10);
     }
-
-	nav.idleOn();
-	//delay(2000);
 }
 
 /**
@@ -186,14 +108,9 @@ void setup1()
 //Serial.println(temps);
 void loop1()
 {
-	
-	//nav.poll(); // this device only draws when needed
-	
-	// if nouvelle mesure && qu'on est en idle
-	//if(  nav.idleTask == nav.sleepTask ) {
 
-		if (adc.newMeasurement)
-		{
+	if (adc.newMeasurement)
+	{
 		// lecture de la dernière série de valeurs
 		// Lire toutes les valeurs de resistances directement en liste, conversion en t° ensuite (long en calcul)
 		double_t rtd1 = adc.getResistanceValue(0);
@@ -249,7 +166,6 @@ void loop1()
 		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
 		tft.setCursor(0, 70); // Start at top-left corner
 		tft.printf(TX);
-		tft.setTextSize(2);
 
 		
 		/** 
@@ -257,15 +173,24 @@ void loop1()
 		 * dont il faut une alim précise ou un vref externe pour que ça fonctionne correctement
 		 * et la résolution est plutot faible
 		*/
-		//double internalTemp = analogReadTemp()
-		}
-	//}
+		//double internalTemp = analogReadTemp();
+		
 
 
-	//delay(100);
+	}
 }
 
+void rotencInterrupt(void)
+{
+	//delayMicroseconds(10);
+	PinStatus b = digitalRead(ROTENC_B);
+	Serial.println(b);
+}
 
+void rotencInterruptClic(void) {
+
+	Serial.println("Click");
+}
 
 
 
@@ -289,7 +214,7 @@ void loop()
 void adcInterrupt() {
 
     int value = adc.ads1120.readADC();
-	
+
     adc.rtd[adc.curRTDSensor].add(value);
 
     // Cas particulier de la mesure en 3 fils (current chopping) : 

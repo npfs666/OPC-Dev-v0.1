@@ -19,10 +19,10 @@ class RTDSensor {
     double_t avgValue;
     int64_t sum;
     uint16_t samples, sampleCount;
-    int16_t offset;
+    float_t offset;
 
     RTDSensor();
-    RTDSensor(uint8_t measurementType, uint8_t analogSwitchPin, uint16_t samples, int16_t offset);
+    RTDSensor(uint8_t measurementType, uint8_t analogSwitchPin, uint16_t samples, float_t offset);
     void reset();
     void add(int32_t value);
     void compute();
@@ -46,7 +46,7 @@ class ADC {
 
     ADC();
     void init();
-    void addRTD(uint8_t number, uint8_t type, uint8_t switchPin, uint16_t samples, int16_t offset);
+    void addRTD(uint8_t number, uint8_t type, uint8_t switchPin, uint16_t samples, float_t offset);
     void startContinuous();
     void stop();
     void restart();
@@ -61,4 +61,25 @@ class ADC {
     void set3WirePT100();
     void invert3WireIDAC();
   };
+
+
+
+class Regulateur {
+
+  #define Chauffer 1
+  #define Refroidir 2
+
+  public:
+
+    float_t SP;
+    uint8_t mode;
+
+};
+
+class Regulation {
+  
+  public:
+
+    Regulateur regulateur[2];
+};
 #endif

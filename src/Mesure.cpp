@@ -9,7 +9,7 @@
 RTDSensor::RTDSensor() {
 }
 
-RTDSensor::RTDSensor(uint8_t type, uint8_t switchPin, uint16_t samples, int16_t offset) {
+RTDSensor::RTDSensor(uint8_t type, uint8_t switchPin, uint16_t samples, float_t offset) {
 
     this->measurementType = type;
     this->analogSwitchPin = switchPin;
@@ -62,7 +62,7 @@ void ADC::init()
     ads1120.begin(SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS, SPI_DRDY);
 }
 
-void ADC::addRTD(uint8_t number, uint8_t type, uint8_t switchPin, uint16_t samples, int16_t offset) {
+void ADC::addRTD(uint8_t number, uint8_t type, uint8_t switchPin, uint16_t samples, float_t offset) {
 
     this->rtd[number] = RTDSensor(type, switchPin, samples, offset);
     this->numRTDSensors++;
