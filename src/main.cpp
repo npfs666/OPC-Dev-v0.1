@@ -68,18 +68,20 @@ NAVROOT(nav, mainMenu, MAX_DEPTH, in, out);
 
 
 
-
+bool cont = false;
 // Gestion de l'écran d'accueil/idle
 result idle(menuOut &o, idleEvent e)
 {
   // Si on rentre en écran de base (lancer l'ADC par exemple)
   if (e == idleStart) {
-	//adc.startContinuous();
+	adc.resetCounts();
+	adc.startContinuous();
   }
 
   // Retour dans la partie menu (couper l'ADC par ex)
   if (e == idleEnd ) {
-	//adc.stop();
+	adc.stop();
+	
   }
 
   return proceed;
@@ -87,15 +89,13 @@ result idle(menuOut &o, idleEvent e)
 // Interruption du clic bouton
 void IsrButton(void)
 {
-  
-
   /*if (!digitalRead(ROTARY_PIN_BUT)) {
     nav.doNav(navCmds::escCmd);
   } else {
     nav.doNav(navCmds::enterCmd);
   }*/
   nav.doNav(navCmds::enterCmd);
-  delay(25);
+  //delay(25); // Ceci fait tout déconner je ne sais pas pour quelle raison
 }
 // Interruption de l'encodeur rotatif
 void IsrRotenc(void)
@@ -105,7 +105,7 @@ void IsrRotenc(void)
   else
     nav.doNav(navCmds::downCmd);
   
-  delay(10);
+  //delay(10); // Ceci fait tout déconner je ne sais pas pour quelle raison
 }
 
 
@@ -115,7 +115,7 @@ void IsrRotenc(void)
 void setup()
 {
 	Serial.begin(115200);
-	delay(2000);
+	//delay(2000);
 	Serial.println("Open Process Controller v0.1");
 
 	// Configuration des pins de commandes des analog switches
@@ -126,15 +126,15 @@ void setup()
 	pinMode(SW_MUX_3, OUTPUT);
 
 	adc.init();
-	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.1);
-	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0.2);
+	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0);
+	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0.01);
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
-	adc.startContinuous();
+	//adc.startContinuous();
 }
 
 void setup1()
 {
-	delay(2000);
+	//delay(2000);
 
 	// Configuration de l'encodeur rotatif
 	pinMode(ROTENC_A, INPUT);
@@ -172,7 +172,7 @@ void setup1()
         while (1) delay(10);
     }
 
-	nav.idleOn();
+	//nav.idleOn();
 	//delay(2000);
 }
 
@@ -187,10 +187,10 @@ void setup1()
 void loop1()
 {
 	
-	//nav.poll(); // this device only draws when needed
+	nav.poll(); // this device only draws when needed
 	
 	// if nouvelle mesure && qu'on est en idle
-	//if(  nav.idleTask == nav.sleepTask ) {
+	if(  nav.idleTask == nav.sleepTask ) {
 
 		if (adc.newMeasurement)
 		{
@@ -198,16 +198,11 @@ void loop1()
 		// Lire toutes les valeurs de resistances directement en liste, conversion en t° ensuite (long en calcul)
 		double_t rtd1 = adc.getResistanceValue(0);
 		double_t rtd2 = adc.getResistanceValue(1);
+		double_t mes1 = adc.getRTDTempInterpolation(0);
+		double_t mes2 = adc.getRTDTempInterpolation(1);
 		adc.newMeasurement = false;
-	
-		double_t mes1, mes2;
 
-		mes1 = adc.getRTDTempInterpolation(rtd1);
-		mes2 = adc.getRTDTempInterpolation(rtd2);
-		mes2+=0.01;
-
-		//double_t rh = adc.getRH(mes2, mes1);
-		
+		//mes2+=0.01;		
 
 		// Envoi sur le port série
 		Serial.print(rtd1, 4);
@@ -259,10 +254,10 @@ void loop1()
 		*/
 		//double internalTemp = analogReadTemp()
 		}
-	//}
+	}
 
 
-	//delay(100);
+	delay(10);
 }
 
 

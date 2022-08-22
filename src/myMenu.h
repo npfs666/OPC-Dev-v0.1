@@ -22,11 +22,11 @@ double_t SP1=0, SP2=0;
 // FIELD(test,"Power","mOhm",98000,102000,100,1,doNothing,noEvent,noStyle),
 
 MENU(subMenuOpr, " Operateur", doNothing, noEvent, wrapStyle, 
-  FIELD(SP1,"SP1:"," %",0,100,10,1,doNothing,noEvent,wrapStyle),
-  FIELD(SP2,"SP2: "," C",0,100,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(SP1,"SP1:"," C",0,100,10,1,doNothing,noEvent,wrapStyle),
+  FIELD(SP2,"SP2:"," C",0,100,1,0.1,doNothing,noEvent,wrapStyle),
   EXIT("<Back"));
 
-int selTest=3;
+
 SELECT(adc.rtd[0].measurementType,selMenuConfInpType1,"Mesure",doNothing,noEvent,wrapStyle
   ,VALUE("2 fils",2,doNothing,noEvent)
   ,VALUE("3 fils",3,doNothing,noEvent)

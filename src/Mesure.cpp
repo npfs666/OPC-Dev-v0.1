@@ -1,6 +1,5 @@
 
-#include "SPI.h"
-#include "Arduino.h"
+
 #include <pinout.h>
 #include "Mesure.h"
 
@@ -120,18 +119,28 @@ void ADC::startContinuous()
         set4WirePT100();
     }
 
-    ads1120.setConversionMode(CONVERSION_CONTINUOUS);
+    delay(1);
     ads1120.setDataRate(DATARATE_45_SPS);
+    ads1120.setConversionMode(CONVERSION_CONTINUOUS);
     ads1120.startSync();
 }
 
+// Met en pause la conversion continue
 void ADC::stop() {
     ads1120.setConversionMode(CONVERSION_SINGLE_SHOT);
 }
 
+// Relance une conversion continue avec les anciens paramètres
 void ADC::restart() {
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
     ads1120.startSync();
+}
+
+// Reset les sommes des sondes et leur boucle de mesure à 0
+void ADC::resetCounts() {
+    for( uint8_t i = 0; i < this->numRTDSensors; i++ )  {
+        rtd[i].reset();
+    }
 }
 
 
@@ -156,7 +165,9 @@ double_t ADC::getResistanceValue(uint8_t rtdSensor) {
 
 
 
-double_t ADC::getRTDTempInterpolation(double_t Rrtd) {
+double_t ADC::getRTDTempInterpolation(uint8_t id) {
+
+    double_t Rrtd = this->getResistanceValue(id);
 
     int16_t index=(int16_t) (Rrtd/10);
     double_t frac = (double_t)(Rrtd/10.0) - index;
@@ -174,7 +185,7 @@ double_t ADC::getRTDTempInterpolation(double_t Rrtd) {
     double_t c = rtdInterpol[index - 1] / 2.0;
     temperature = (double_t)a + frac * (b - c + frac * (c + b - a));
 
-    return temperature;
+    return temperature + rtd[id].offset;
 }
 
 /**
