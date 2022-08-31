@@ -30,17 +30,31 @@ class RTDSensor {
     
 };
 
+class Regulateur {
+
+  #define Chauffer 1
+  #define Refroidir 2
+
+  public:
+
+    float_t SP;
+    uint8_t mode;
+    float_t hysteresis;
+
+};
+
 
 
 class ADC {
 
   public:
-    uint8_t measurementSamples;
+    //uint8_t measurementSamples;
     uint8_t numRTDSensors;
     uint8_t curRTDSensor;
     double_t refResistanceValue = 1649.735;
     ADS1120 ads1120;
     RTDSensor rtd[3];
+    Regulateur reg[2];
     bool newMeasurement;
     
 
@@ -65,22 +79,7 @@ class ADC {
 
 
 
-class Regulateur {
 
-  #define Chauffer 1
-  #define Refroidir 2
 
-  public:
 
-    float_t SP;
-    uint8_t mode;
-
-};
-
-class Regulation {
-  
-  public:
-
-    Regulateur regulateur[2];
-};
 #endif

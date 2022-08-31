@@ -22,8 +22,10 @@ double_t SP1=0, SP2=0;
 // FIELD(test,"Power","mOhm",98000,102000,100,1,doNothing,noEvent,noStyle),
 
 MENU(subMenuOpr, " Operateur", doNothing, noEvent, wrapStyle, 
-  FIELD(SP1,"SP1:"," C",0,100,10,1,doNothing,noEvent,wrapStyle),
-  FIELD(SP2,"SP2:"," C",0,100,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(adc.reg[0].SP,"SP1:"," C",0,100,10,1,doNothing,noEvent,wrapStyle),
+#if OUTPUTS >= 2
+  FIELD(adc.reg[1].SP,"SP2:"," C",0,100,1,0.1,doNothing,noEvent,wrapStyle),
+#endif
   EXIT("<Back"));
 
 
@@ -73,23 +75,23 @@ MENU(subMenuConfInp, " Sondes", doNothing, noEvent, wrapStyle,
 
 
 
-SELECT(reg.regulateur[0].mode,selMenuConfCntrSP1Mode,"Mode",doNothing,noEvent,wrapStyle
+SELECT(adc.reg[0].mode,selMenuConfCntrSP1Mode,"Mode",doNothing,noEvent,wrapStyle
   ,VALUE("Chauffer",1,doNothing,noEvent)
   ,VALUE("Refroidir",2,doNothing,noEvent)
 );
 MENU(subMenuConfCntrSP1, " Sortie 1", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfCntrSP1Mode),
-  FIELD(reg.regulateur[0].SP,"Hysteresis:"," C",0,10,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(adc.reg[0].hysteresis,"Hysteresis:"," C",0,10,1,0.1,doNothing,noEvent,wrapStyle),
   EXIT("<Back"));
 
 #if OUTPUTS >= 2
-SELECT(reg.regulateur[1].mode,selMenuConfCntrSP2Mode,"Mode",doNothing,noEvent,wrapStyle
-  ,VALUE("Deshumidifier",2,doNothing,noEvent)
-  ,VALUE("Humidifier",3,doNothing,noEvent)
+SELECT(adc.reg[1].mode,selMenuConfCntrSP2Mode,"Mode",doNothing,noEvent,wrapStyle
+  ,VALUE("Deshumidifier",1,doNothing,noEvent)
+  ,VALUE("Humidifier",2,doNothing,noEvent)
 );
 MENU(subMenuConfCntrSP2, " Sortie 2", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfCntrSP2Mode),
-  FIELD(reg.regulateur[1].SP,"Hysteresis:"," C",0,10,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(adc.reg[1].hysteresis,"Hysteresis:"," C",0,10,1,0.1,doNothing,noEvent,wrapStyle),
   EXIT("<Back"));
 #endif
 

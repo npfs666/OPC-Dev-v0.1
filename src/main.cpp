@@ -38,12 +38,11 @@
 #include <menuIO/chainStream.h>
 #include <menuIO/serialOut.h>
 #include <menuIO/serialIn.h>
-//#include <menuIO/encoderIn.h>
+#include <EEPROM.h>
 
 using namespace Menu;
 
 ADC adc;
-Regulation reg;
 
 #include "myMenu.h"
 
@@ -51,11 +50,9 @@ Regulation reg;
 
 
 Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
-//void rotencInterrupt();
-//void rotencInterruptClic();
-void adcInterrupt();
 double_t getHum(double_t tempSeche, double_t tempHumide, double_t pressionAtm);
 Adafruit_BME280 bme;
+void adcInterrupt();
 
 // Déclaration des éléments du menu
 //serialIn serial(Serial);
@@ -68,7 +65,7 @@ NAVROOT(nav, mainMenu, MAX_DEPTH, in, out);
 
 
 
-bool cont = false;
+
 // Gestion de l'écran d'accueil/idle
 result idle(menuOut &o, idleEvent e)
 {
@@ -86,6 +83,9 @@ result idle(menuOut &o, idleEvent e)
 
   return proceed;
 }
+
+
+
 // Interruption du clic bouton
 void IsrButton(void)
 {
@@ -144,7 +144,7 @@ void setup1()
 	attachInterrupt(digitalPinToInterrupt(ROTENC_CLIC), IsrButton, FALLING);
 
 	nav.idleTask = idle; // point a function to be used when menu is suspended
-  	nav.timeOut=10; //10sec
+  	nav.timeOut=1; //10sec
 	
 
 	// Configuration du SPI de l'écran
@@ -155,6 +155,7 @@ void setup1()
 	tft.setRotation(3);
 	tft.setTextSize(2);
 	tft.setTextWrap(false);
+	tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
 	//tft.fillScreen(ST77XX_BLACK);
 
 	// Configuration du BME280
@@ -162,7 +163,7 @@ void setup1()
     Wire.setSDA(8);
     unsigned status = bme.begin(0x76, &Wire);
 	// You can also pass in a Wire library object like &Wire2
-    if (!status) {
+    /*if (!status) {
         Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
         Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
         Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
@@ -170,7 +171,7 @@ void setup1()
         Serial.print("        ID of 0x60 represents a BME 280.\n");
         Serial.print("        ID of 0x61 represents a BME 680.\n");
         while (1) delay(10);
-    }
+    }*/
 
 	//nav.idleOn();
 	//delay(2000);
@@ -200,9 +201,7 @@ void loop1()
 		double_t rtd2 = adc.getResistanceValue(1);
 		double_t mes1 = adc.getRTDTempInterpolation(0);
 		double_t mes2 = adc.getRTDTempInterpolation(1);
-		adc.newMeasurement = false;
-
-		//mes2+=0.01;		
+		adc.newMeasurement = false;		
 
 		// Envoi sur le port série
 		Serial.print(rtd1, 4);
@@ -217,36 +216,69 @@ void loop1()
 
 		// Affichage écran
 		char TX[50];
-		//tft.fillScreen(ST77XX_BLACK);
-		tft.setTextSize(3);				 // Normal 1:1 pixel scale
-		tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Draw white text
-		tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
+
+		// Affichage de la mesure
+		tft.setTextSize(4);
+		tft.setCursor(0, 10);
+		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+		sprintf(TX,"%03.2lf", rh);
+		tft.printf(TX);
+		// Affichage de la consigne
+		tft.setTextSize(4);
+		tft.setCursor(0, 60);
+		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
+		sprintf(TX,"%03.1lf", 98.5);
+		tft.printf(TX);
+		// Affichage de l'état des sorties
 		tft.setTextSize(2);
-		tft.setCursor(0, 0); // Start at top-left corner
-		tft.printf("Consigne");
+		tft.setCursor(20, 110);
+		tft.setTextColor(ST77XX_ORANGE, ST77XX_BLACK);
+		tft.printf("SP1");
 		tft.setTextSize(2);
-		tft.setCursor(0, 20); // Start at top-left corner
+		tft.setCursor(80, 110);
+		tft.setTextColor(ST77XX_ORANGE, ST77XX_BLACK);
+		tft.printf("SP2");
+
+		/*
+		//tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Draw white text
+		//tft.setTextSize(2);
+		//tft.setCursor(0, 0); // Start at top-left corner
+		//tft.printf("Consigne");
+		tft.setTextSize(2);
+		tft.setCursor(0, 20);
 		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
 		sprintf(TX,"%3.3lf %3.3lf", mes1, rtd1); //  XXX.XX
-		//tft.fillRect(0, 20, 84, 36, ST77XX_BLACK);
 		tft.printf(TX);
-		tft.setTextSize(2);
-		tft.setCursor(0, 40); // Start at top-left corner
+		//tft.setTextSize(2);
+		tft.setCursor(0, 40);
 		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
 		sprintf(TX,"%3.3lf %3.3lf", mes2, rtd2); //  XXX.XX
-		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
-		tft.setCursor(0, 40); // Start at top-left corner
+		tft.setCursor(0, 40);
 		tft.printf(TX);
 		tft.setTextSize(3);
-		tft.setCursor(0, 60); // Start at top-left corner
+		tft.setCursor(0, 60);
 		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
 		sprintf(TX,"%3.3lf", rh); //  XXX.XX
-		//tft.fillRect(0, 40, 108, 64, ST77XX_BLACK);
-		tft.setCursor(0, 70); // Start at top-left corner
+		tft.setCursor(0, 70);
 		tft.printf(TX);
-		tft.setTextSize(2);
+		tft.setTextSize(2);*/
 
+		/*Serial.println(sizeof(double_t));
+		Serial.println(sizeof(int64_t));
+		Serial.println(sizeof(uint16_t));
+		Serial.println(sizeof(float_t));
+		Serial.println(sizeof(adc.rtd[0]));*/
 		
+		// On peux enregistrer des objets complets et les rapatrier, donc impeccable
+		/*EEPROM.begin(512);
+		EEPROM.put(0, adc);
+
+		ADC adc2;
+		Serial.println(adc2.rtd[0].measurementType);
+		EEPROM.get(0, adc2);
+		Serial.println(adc2.rtd[0].measurementType);
+		EEPROM.end();*/
+
 		/** 
 		 * La lecture de la t°C interne du rasp est lié a Vcc = 3v3
 		 * dont il faut une alim précise ou un vref externe pour que ça fonctionne correctement
@@ -255,7 +287,6 @@ void loop1()
 		//double internalTemp = analogReadTemp()
 		}
 	}
-
 
 	delay(10);
 }
@@ -338,7 +369,7 @@ double_t getHum(double_t tempSeche, double_t tempHumide, double_t pressionAtm) {
     double_t Cp = 0.00006 * tempSeche + 1.005;
     // Energie de vaporiation de l'eau [kJ/kg]
     double_t lambda = -2.3664 * tempSeche + 2501;
-    double_t A = Cp / (lambda * 0.622 );
+    double_t A = Cp / (lambda * 0.622 ); // [1/°C]
 
     // Pression athmosphérique [kPa]
     //double_t P = 102.220;

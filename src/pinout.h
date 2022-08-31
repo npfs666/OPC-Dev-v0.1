@@ -27,5 +27,9 @@
 #define SPI_CS   17
 #define SPI_DRDY 20
 
+// Sorties
+#define RELAIS_1 6
+#define RELAIS_2 7
+
 
 #endif
