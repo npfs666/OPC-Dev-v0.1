@@ -204,13 +204,13 @@ void loop1()
 		adc.newMeasurement = false;		
 
 		// Envoi sur le port série
-		Serial.print(rtd1, 4);
+		Serial.print(mes1, 2);
 		Serial.print(" ; ");
-		Serial.print(rtd2, 4);
-		Serial.print(" ; ");
-		Serial.print(bme.readPressure() / 100.0F);
-		Serial.print(" ; ");
-		Serial.println(bme.readHumidity());
+		Serial.println(mes2, 2);
+		//Serial.print(" ; ");
+		//Serial.print(bme.readPressure() / 100.0F);
+		//Serial.print(" ; ");
+		//Serial.println(bme.readHumidity());
 
 		double_t rh = getHum(mes2, mes1, (bme.readPressure() / 1000.0F) );
 
