@@ -50,7 +50,6 @@ ADC adc;
 
 
 Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
-double_t getHum(double_t tempSeche, double_t tempHumide, double_t pressionAtm);
 Adafruit_BME280 bme;
 void adcInterrupt();
 
@@ -71,14 +70,15 @@ result idle(menuOut &o, idleEvent e)
 {
   // Si on rentre en écran de base (lancer l'ADC par exemple)
   if (e == idleStart) {
-	adc.resetCounts();
+	
+	//adc.resetCounts();
 	adc.startContinuous();
   }
 
   // Retour dans la partie menu (couper l'ADC par ex)
   if (e == idleEnd ) {
 	adc.stop();
-	
+	//adc.resetCounts();
   }
 
   return proceed;
@@ -126,10 +126,9 @@ void setup()
 	pinMode(SW_MUX_3, OUTPUT);
 
 	adc.init();
-	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0);
-	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0.01);
+	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.02);
+	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0);
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
-	//adc.startContinuous();
 }
 
 void setup1()
@@ -161,30 +160,16 @@ void setup1()
 	// Configuration du BME280
 	Wire.setSCL(9);
     Wire.setSDA(8);
-    unsigned status = bme.begin(0x76, &Wire);
-	// You can also pass in a Wire library object like &Wire2
-    /*if (!status) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
-        Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
-        Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
-        Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
-        Serial.print("        ID of 0x60 represents a BME 280.\n");
-        Serial.print("        ID of 0x61 represents a BME 680.\n");
-        while (1) delay(10);
-    }*/
-
-	//nav.idleOn();
-	//delay(2000);
+    bme.begin(0x76, &Wire);
 }
+
+
 
 /**
  * Cpu1 : contrôle des IT utilisateur et écran
  * @brief
  *
  */
-//uint32_t  start = to_us_since_boot(get_absolute_time());
-//uint32_t  temps = to_us_since_boot(get_absolute_time()) - start;
-//Serial.println(temps);
 void loop1()
 {
 	
@@ -211,8 +196,8 @@ void loop1()
 		//Serial.print(bme.readPressure() / 100.0F);
 		//Serial.print(" ; ");
 		//Serial.println(bme.readHumidity());
-
-		double_t rh = getHum(mes2, mes1, (bme.readPressure() / 1000.0F) );
+		
+		double_t rh = adc.getRH(mes2, mes1, (bme.readPressure() / 1000.0F) );
 
 		// Affichage écran
 		char TX[50];
@@ -358,33 +343,4 @@ void adcInterrupt() {
 		adc.restart();
     }
 
-}
-
-
-
-double_t getHum(double_t tempSeche, double_t tempHumide, double_t pressionAtm) {
-
-    // 1: Calcul de la "constante" psychrométrique
-    // Capacité thermique massique de l'air [kJ/kg.°C]
-    double_t Cp = 0.00006 * tempSeche + 1.005;
-    // Energie de vaporiation de l'eau [kJ/kg]
-    double_t lambda = -2.3664 * tempSeche + 2501;
-    double_t A = Cp / (lambda * 0.622 ); // [1/°C]
-
-    // Pression athmosphérique [kPa]
-    //double_t P = 102.220;
-	double_t P = pressionAtm;
-
-    double_t pVs = 0.6108 * pow(2.71828, ((17.27 * tempHumide)/(tempHumide + 237.3))); // [kPa]
-    double_t pV = pVs - A*P*(tempSeche-tempHumide); // [kPa]
-    double_t pVs2 = 0.6108 * pow(2.71828, ((17.27 * tempSeche)/(tempSeche + 237.3))); // [kPa]
-
-    // Ancien calcul
-    //double_t pVs = pow(10,(2.7877+(7.625*mes1)/(241.6+mes1)));
-    //double_t pV = pVs - 0.000667*102.3000*(mes2-mes1);
-    //double_t pVs2 = pow(10,(2.7877+(7.625*mes2)/(241.6+mes2)));
-
-    double_t rh = ((double_t)pV/pVs2)*100.0;
-
-    return rh;
 }

@@ -139,7 +139,7 @@ void ADC::restart() {
 // Reset les sommes des sondes et leur boucle de mesure à 0
 void ADC::resetCounts() {
     for( uint8_t i = 0; i < this->numRTDSensors; i++ )  {
-        rtd[i].reset();
+        this->rtd[i].reset();
     }
 }
 
@@ -195,17 +195,17 @@ double_t ADC::getRTDTempInterpolation(uint8_t id) {
  * @param tempHumide température du bulbe humide
  * @return double_t Humidité relative en %
  */
-double_t getRH(double_t tempSeche, double_t tempHumide) {
+double_t ADC::getRH(double_t tempSeche, double_t tempHumide, double_t pressionAtm) {
 
     // 1: Calcul de la "constante" psychrométrique
     // Capacité thermique massique de l'air [kJ/kg.°C]
     double_t Cp = 0.00006 * tempSeche + 1.005;
     // Energie de vaporiation de l'eau [kJ/kg]
     double_t lambda = -2.3664 * tempSeche + 2501;
-    double_t A = Cp / (lambda * 0.622 );
+    double_t A = Cp / (lambda * 0.622 ); // [1/°C]
 
     // Pression athmosphérique [kPa]
-    double_t P = 102.220;
+	double_t P = pressionAtm;
 
     double_t pVs = 0.6108 * pow(2.71828, ((17.27 * tempHumide)/(tempHumide + 237.3))); // [kPa]
     double_t pV = pVs - A*P*(tempSeche-tempHumide); // [kPa]
