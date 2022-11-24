@@ -71,14 +71,13 @@ result idle(menuOut &o, idleEvent e)
   // Si on rentre en écran de base (lancer l'ADC par exemple)
   if (e == idleStart) {
 	
-	//adc.resetCounts();
+	adc.resetCounts();
 	adc.startContinuous();
   }
 
   // Retour dans la partie menu (couper l'ADC par ex)
   if (e == idleEnd ) {
 	adc.stop();
-	//adc.resetCounts();
   }
 
   return proceed;
@@ -115,7 +114,7 @@ void IsrRotenc(void)
 void setup()
 {
 	Serial.begin(115200);
-	//delay(2000);
+	delay(3000);
 	Serial.println("Open Process Controller v0.1");
 
 	// Configuration des pins de commandes des analog switches
@@ -128,12 +127,13 @@ void setup()
 	adc.init();
 	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.02);
 	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0);
+	adc.resetCounts();
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
 }
 
 void setup1()
 {
-	//delay(2000);
+	delay(3000);
 
 	// Configuration de l'encodeur rotatif
 	pinMode(ROTENC_A, INPUT);
@@ -144,7 +144,6 @@ void setup1()
 
 	nav.idleTask = idle; // point a function to be used when menu is suspended
   	nav.timeOut=1; //10sec
-	
 
 	// Configuration du SPI de l'écran
 	SPI1.setSCK(LCD_SCK);
@@ -299,7 +298,7 @@ void loop()
 
 void adcInterrupt() {
 
-    int value = adc.ads1120.readADC();
+    int32_t value = adc.ads1120.readADC();
 	
     adc.rtd[adc.curRTDSensor].add(value);
 

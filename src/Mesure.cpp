@@ -80,7 +80,6 @@ void ADC::set4WirePT100()
     ads1120.setFIR(FIR_50HZ);
     ads1120.setVoltageRef(VREF_EXTERNAL_REFP0_REFN0);
     ads1120.setIDAC1routing(IDAC_AIN3_REFN1);
-    //ads1120.setIDAC2routing(IDAC_AIN3_REFN1);
     ads1120.setIDACcurrent(CURRENT_1000_UA);
     ads1120.setGain(8);
 }
@@ -111,11 +110,11 @@ void ADC::invert3WireIDAC()
 void ADC::startContinuous()
 {
     // Préparation de la première lecture
-    this->curRTDSensor = 0;
-    digitalWrite(rtd[this->curRTDSensor].analogSwitchPin, HIGH);
-    if (rtd[this->curRTDSensor].measurementType == TYPE_3WIRE) {
+    curRTDSensor = 0;
+    digitalWrite(rtd[curRTDSensor].analogSwitchPin, HIGH);
+    if (rtd[curRTDSensor].measurementType == TYPE_3WIRE) {
         set3WirePT100();
-    } else if(rtd[this->curRTDSensor].measurementType == TYPE_4WIRE) {
+    } else if(rtd[curRTDSensor].measurementType == TYPE_4WIRE) {
         set4WirePT100();
     }
 
@@ -128,6 +127,9 @@ void ADC::startContinuous()
 // Met en pause la conversion continue
 void ADC::stop() {
     ads1120.setConversionMode(CONVERSION_SINGLE_SHOT);
+    for( uint8_t i = 0; i < numRTDSensors; i++ )  {
+        digitalWrite(rtd[curRTDSensor].analogSwitchPin, LOW);
+    }
 }
 
 // Relance une conversion continue avec les anciens paramètres
@@ -138,8 +140,8 @@ void ADC::restart() {
 
 // Reset les sommes des sondes et leur boucle de mesure à 0
 void ADC::resetCounts() {
-    for( uint8_t i = 0; i < this->numRTDSensors; i++ )  {
-        this->rtd[i].reset();
+    for( uint8_t i = 0; i < numRTDSensors; i++ )  {
+        rtd[i].reset();
     }
 }
 

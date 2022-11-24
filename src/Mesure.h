@@ -17,7 +17,7 @@ class RTDSensor {
     uint8_t measurementType;
     uint8_t analogSwitchPin;
     double_t avgValue;
-    int64_t sum;
+    int32_t sum;
     uint16_t samples, sampleCount;
     float_t offset;
 
