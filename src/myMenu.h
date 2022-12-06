@@ -30,9 +30,9 @@ MENU(subMenuOpr, " Operateur", doNothing, noEvent, wrapStyle,
 
 
 SELECT(adc.rtd[0].measurementType,selMenuConfInpType1,"Mesure",doNothing,noEvent,wrapStyle
-  ,VALUE("2 fils",2,doNothing,noEvent)
-  ,VALUE("3 fils",3,doNothing,noEvent)
-  ,VALUE("4 fils",4,doNothing,noEvent)
+  ,VALUE("2 fils",TYPE_2WIRE,doNothing,noEvent)
+  ,VALUE("3 fils",TYPE_3WIRE,doNothing,noEvent)
+  ,VALUE("4 fils",TYPE_4WIRE,doNothing,noEvent)
 );
 MENU(subMenuConfInp1, " Sonde 1", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfInpType1),
@@ -42,9 +42,9 @@ MENU(subMenuConfInp1, " Sonde 1", doNothing, noEvent, wrapStyle,
 
 #if SENSORS >= 2
 SELECT(adc.rtd[1].measurementType,selMenuConfInpType2,"Mesure",doNothing,noEvent,wrapStyle
-  ,VALUE("2 fils",2,doNothing,noEvent)
-  ,VALUE("3 fils",3,doNothing,noEvent)
-  ,VALUE("4 fils",4,doNothing,noEvent)
+  ,VALUE("2 fils",TYPE_2WIRE,doNothing,noEvent)
+  ,VALUE("3 fils",TYPE_3WIRE,doNothing,noEvent)
+  ,VALUE("4 fils",TYPE_4WIRE,doNothing,noEvent)
 );
 MENU(subMenuConfInp2, " Sonde 2", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfInpType2),
@@ -53,9 +53,9 @@ MENU(subMenuConfInp2, " Sonde 2", doNothing, noEvent, wrapStyle,
 #endif
 #if SENSORS >= 3
 SELECT(adc.rtd[2].measurementType,selMenuConfInpType3,"Mesure",doNothing,noEvent,wrapStyle
-  ,VALUE("2 fils",2,doNothing,noEvent)
-  ,VALUE("3 fils",3,doNothing,noEvent)
-  ,VALUE("4 fils",4,doNothing,noEvent)
+  ,VALUE("2 fils",TYPE_2WIRE,doNothing,noEvent)
+  ,VALUE("3 fils",TYPE_3WIRE,doNothing,noEvent)
+  ,VALUE("4 fils",TYPE_4WIRE,doNothing,noEvent)
 );
 MENU(subMenuConfInp3, " Sonde 3", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfInpType3),

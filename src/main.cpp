@@ -125,7 +125,7 @@ void setup()
 	pinMode(SW_MUX_3, OUTPUT);
 
 	adc.init();
-	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.02);
+	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.01);
 	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0);
 	adc.resetCounts();
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
@@ -142,19 +142,18 @@ void setup1()
 	attachInterrupt(digitalPinToInterrupt(ROTENC_A), IsrRotenc, FALLING);
 	attachInterrupt(digitalPinToInterrupt(ROTENC_CLIC), IsrButton, FALLING);
 
-	nav.idleTask = idle; // point a function to be used when menu is suspended
-  	nav.timeOut=1; //10sec
+	nav.idleTask = idle;	// point a function to be used when menu is suspended
+  	nav.timeOut=1;	// in seconds
 
 	// Configuration du SPI de l'écran
 	SPI1.setSCK(LCD_SCK);
 	SPI1.setTX(LCD_MOSI);
-	tft.init(135, 240); // Init ST7789 240x240
+	tft.init(135, 240);
 	tft.setSPISpeed(48000000);
 	tft.setRotation(3);
 	tft.setTextSize(2);
 	tft.setTextWrap(false);
-	tft.cp437(true);				 // Use full 256 char 'Code Page 437' font
-	//tft.fillScreen(ST77XX_BLACK);
+	tft.cp437(true);	// Use full 256 char 'Code Page 437' font
 
 	// Configuration du BME280
 	Wire.setSCL(9);
@@ -179,24 +178,33 @@ void loop1()
 
 		if (adc.newMeasurement)
 		{
+		
+		float_t temperature = bme.readTemperature(); // Lecture de la T°C actuelle du système de mesure
+		float_t pressure = bme.readPressure(); // Pa
+
 		// lecture de la dernière série de valeurs
 		// Lire toutes les valeurs de resistances directement en liste, conversion en t° ensuite (long en calcul)
-		double_t rtd1 = adc.getResistanceValue(0);
-		double_t rtd2 = adc.getResistanceValue(1);
-		double_t mes1 = adc.getRTDTempInterpolation(0);
-		double_t mes2 = adc.getRTDTempInterpolation(1);
+		double_t rtd1 = adc.getResistanceValue(0, temperature);
+		double_t rtd2 = adc.getResistanceValue(1, temperature);
+		
+		double_t mes1 = adc.getRTDTempInterpolation(0, temperature);
+		double_t mes2 = adc.getRTDTempInterpolation(1, temperature);
 		adc.newMeasurement = false;		
 
+		double_t rh = adc.getRH(mes2, mes1, pressure / 1000.0F );
+
 		// Envoi sur le port série
-		Serial.print(mes1, 2);
-		Serial.print(" ; ");
-		Serial.println(mes2, 2);
-		//Serial.print(" ; ");
-		//Serial.print(bme.readPressure() / 100.0F);
-		//Serial.print(" ; ");
-		//Serial.println(bme.readHumidity());
+		Serial.print(temperature, 1); Serial.print(" C ;  ");
+		Serial.print(rtd1, 3); Serial.print(" ; ");
+		Serial.print(mes1, 3); Serial.print(" ||||| ");
+		Serial.print(rtd2, 3); Serial.print(" ; ");
+		Serial.print(mes2, 3); Serial.print(" ||||| ");
+		Serial.print(bme.readPressure() / 100.0F, 1); Serial.print(" ; ");
+		Serial.print(rh, 2);
+		Serial.println("");
 		
-		double_t rh = adc.getRH(mes2, mes1, (bme.readPressure() / 1000.0F) );
+
+		
 
 		// Affichage écran
 		char TX[50];
@@ -262,13 +270,6 @@ void loop1()
 		EEPROM.get(0, adc2);
 		Serial.println(adc2.rtd[0].measurementType);
 		EEPROM.end();*/
-
-		/** 
-		 * La lecture de la t°C interne du rasp est lié a Vcc = 3v3
-		 * dont il faut une alim précise ou un vref externe pour que ça fonctionne correctement
-		 * et la résolution est plutot faible
-		*/
-		//double internalTemp = analogReadTemp()
 		}
 	}
 
