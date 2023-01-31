@@ -52,6 +52,7 @@ ADC adc;
 Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
 Adafruit_BME280 bme;
 void adcInterrupt();
+double temperatureADC = 0;
 
 // Déclaration des éléments du menu
 //serialIn serial(Serial);
@@ -114,8 +115,8 @@ void IsrRotenc(void)
 void setup()
 {
 	Serial.begin(115200);
-	delay(3000);
-	Serial.println("Open Process Controller v0.1");
+	delay(100);
+	//Serial.println("Open Process Controller v0.1");
 
 	// Configuration des pins de commandes des analog switches
 	pinMode(SW_3_WIRE, OUTPUT);
@@ -133,7 +134,7 @@ void setup()
 
 void setup1()
 {
-	delay(3000);
+	delay(100);
 
 	// Configuration de l'encodeur rotatif
 	pinMode(ROTENC_A, INPUT);
@@ -141,9 +142,6 @@ void setup1()
 	pinMode(ROTENC_CLIC, INPUT);
 	attachInterrupt(digitalPinToInterrupt(ROTENC_A), IsrRotenc, FALLING);
 	attachInterrupt(digitalPinToInterrupt(ROTENC_CLIC), IsrButton, FALLING);
-
-	nav.idleTask = idle;	// point a function to be used when menu is suspended
-  	nav.timeOut=1;	// in seconds
 
 	// Configuration du SPI de l'écran
 	SPI1.setSCK(LCD_SCK);
@@ -159,6 +157,11 @@ void setup1()
 	Wire.setSCL(9);
     Wire.setSDA(8);
     bme.begin(0x76, &Wire);
+
+	nav.idleTask = idle;	// point a function to be used when menu is suspended
+  	nav.timeOut=10;	// in seconds
+	//nav.idleOn();
+	nav.exit();
 }
 
 
@@ -178,7 +181,7 @@ void loop1()
 
 		if (adc.newMeasurement)
 		{
-		
+
 		float_t temperature = bme.readTemperature(); // Lecture de la T°C actuelle du système de mesure
 		float_t pressure = bme.readPressure(); // Pa
 
@@ -187,19 +190,21 @@ void loop1()
 		double_t rtd1 = adc.getResistanceValue(0, temperature);
 		double_t rtd2 = adc.getResistanceValue(1, temperature);
 		
-		double_t mes1 = adc.getRTDTempInterpolation(0, temperature);
-		double_t mes2 = adc.getRTDTempInterpolation(1, temperature);
+		double_t mes1 = adc.getRTDTempInterpolation(0, temperatureADC);
+		double_t mes2 = adc.getRTDTempInterpolation(1, temperatureADC);
 		adc.newMeasurement = false;		
 
 		double_t rh = adc.getRH(mes2, mes1, pressure / 1000.0F );
+		double_t pressionABS = bme.readPressure() / 100.0F;
 
 		// Envoi sur le port série
 		Serial.print(temperature, 1); Serial.print(" C ;  ");
+		Serial.print(temperatureADC, 1); Serial.print(" C ;  ");
 		Serial.print(rtd1, 3); Serial.print(" ; ");
 		Serial.print(mes1, 3); Serial.print(" ||||| ");
 		Serial.print(rtd2, 3); Serial.print(" ; ");
 		Serial.print(mes2, 3); Serial.print(" ||||| ");
-		Serial.print(bme.readPressure() / 100.0F, 1); Serial.print(" ; ");
+		Serial.print(pressionABS, 1); Serial.print(" ; ");
 		Serial.print(rh, 2);
 		Serial.println("");
 		
@@ -211,15 +216,28 @@ void loop1()
 
 		// Affichage de la mesure
 		tft.setTextSize(4);
-		tft.setCursor(0, 10);
+		tft.setCursor(0, 5);
 		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
 		sprintf(TX,"%03.2lf", rh);
+		tft.printf(TX);
+		// test
+		tft.setTextSize(1);
+		tft.setCursor(0, 40);
+		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+		sprintf(TX,"%03.3lf", mes1);
+		tft.printf(TX);
+		// test2
+		tft.setTextSize(1);
+		tft.setCursor(60, 40);
+		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+		sprintf(TX,"%03.3lf", mes2);
 		tft.printf(TX);
 		// Affichage de la consigne
 		tft.setTextSize(4);
 		tft.setCursor(0, 60);
 		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
-		sprintf(TX,"%03.1lf", 98.5);
+		//sprintf(TX,"%03.1lf", 98.5);
+		sprintf(TX,"%04.1lf", pressionABS);
 		tft.printf(TX);
 		// Affichage de l'état des sorties
 		tft.setTextSize(2);
@@ -316,6 +334,8 @@ void adcInterrupt() {
     if (adc.rtd[adc.curRTDSensor].sampleCount == adc.rtd[adc.curRTDSensor].samples)
 	{
         adc.stop();
+
+		temperatureADC = adc.ads1120.readInternalTemp();	// T°C interne de l'ADC
 
 		adc.rtd[adc.curRTDSensor].compute();
 

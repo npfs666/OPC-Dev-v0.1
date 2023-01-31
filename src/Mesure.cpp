@@ -130,7 +130,7 @@ void ADC::startContinuous()
     }
 
     delay(1);
-    ads1120.setDataRate(DATARATE_45_SPS);
+    ads1120.setDataRate(DATARATE_90_SPS);
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
     ads1120.startSync();
 }
