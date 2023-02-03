@@ -49,7 +49,7 @@ void ADS1120::begin(uint8_t clk_pin, uint8_t miso_pin, uint8_t mosi_pin, uint8_t
   SPI.setTX(ADS1120_MOSI_PIN);
 
   SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-  SPI.begin(true);   
+  SPI.begin(true);
 
   // Configure chip select as an output
   pinMode(ADS1120_CS_PIN, OUTPUT);
@@ -105,14 +105,15 @@ byte *ADS1120::readADC_Array()
 int ADS1120::readADC_Single()
 {
   digitalWrite(ADS1120_CS_PIN, LOW); // Take CS low
-  delayMicroseconds(1);              // Minimum of td(CSSC)
+  delayMicroseconds(10);              // Minimum of td(CSSC)
 
-  SPI.transfer(0x08);
+  SPI.transfer(CMD_START_SYNC);
   while (digitalRead(ADS1120_DRDY_PIN) == HIGH)
   {
     // Espera a que DRDY se ponga en nivel bajo. Esto es un riesgo porque pude quedar bloqueado el codigo aca.
     // Se deberia poner un timeout configurable en el metodo de begin y devolver un error si no responde
   }
+  //delay(100);
 
   int adcVal = SPI.transfer(SPI_MASTER_DUMMY);
   adcVal = (adcVal << 8) | SPI.transfer(SPI_MASTER_DUMMY);

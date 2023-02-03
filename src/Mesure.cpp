@@ -41,17 +41,33 @@ double_t RTDSensor::readValue()
 
 
 
+Measurement::Measurement()
+{
+}
+Measurement::Measurement(uint8_t rtdIndex)
+{
+    type = MEASUERMENT_TEMPERATURE;
+    rtd1 = rtdIndex;
+}
+/**
+ * @brief Variables init and ADC init
+ */
+Measurement::Measurement(uint8_t rtdIndexDry, uint8_t rtdIndexWet)
+{
+    type = MEASUERMENT_RELATIVE_HUMIDITY;
+    rtd1 = rtdIndexDry;
+    rtd2 = rtdIndexWet;
+}
 
 
 
-
-ADC::ADC()
+SensorBoard::SensorBoard()
 {
 }
 /**
  * @brief Variables init and ADC init
  */
-void ADC::init()
+void SensorBoard::init()
 {
     this->numRTDSensors = 0;
     this->newMeasurement = false;
@@ -67,17 +83,17 @@ void ADC::init()
  * @param samples 4 samples -> 1bit improve, 16 -> 2bits, 64 -> 3bits, 256 -> 4bits (oversampling)
  * @param offset Sensor offset
  */
-void ADC::addRTD(uint8_t number, uint8_t type, uint8_t switchPin, uint16_t samples, float_t offset) {
+void SensorBoard::addRTD(uint8_t type, uint8_t switchPin, uint16_t samples, float_t offset) {
 
-    this->rtd[number] = RTDSensor(type, switchPin, samples, offset);
-    this->numRTDSensors++;
+    rtd[numRTDSensors] = RTDSensor(type, switchPin, samples, offset);
+    numRTDSensors++;
 }
 
 /**
- * @brief Configures the ADC to measure a 4-Wire RTD
+ * @brief Configures the ADC to measure a 4-Wire PT-100 RTD
  *
  */
-void ADC::set4WirePT100()
+void SensorBoard::set4WirePT100()
 {
     ads1120.setConversionMode(CONVERSION_SINGLE_SHOT);
     digitalWrite(SW_3_WIRE, LOW);
@@ -90,10 +106,10 @@ void ADC::set4WirePT100()
     ads1120.setGain(8);
 }
 /**
- * @brief Configures the ADC to measure a 3-Wire RTD
+ * @brief Configures the ADC to measure a 3-Wire PT-100 RTD
  *
  */
-void ADC::set3WirePT100()
+void SensorBoard::set3WirePT100()
 {
     ads1120.setConversionMode(CONVERSION_SINGLE_SHOT);
     digitalWrite(SW_3_WIRE, HIGH);
@@ -107,22 +123,26 @@ void ADC::set3WirePT100()
     ads1120.setGain(16);
 }
 
-// Inverse les sources de courant (current chopping) pour annuler leurs inexactitudes
-void ADC::invert3WireIDAC()
+
+/**
+ * @brief Invert the IDAC current source in 3-Wire measurement, to cancel their différences (current chopping)
+ * 
+ */
+void SensorBoard::invert3WireIDAC()
 {
-    //ads1120.setConversionMode(CONVERSION_SINGLE_SHOT); // Stop conversion in case
+    ads1120.setConversionMode(CONVERSION_SINGLE_SHOT); // Stop conversion
     ads1120.setIDAC1routing(IDAC_AIN2);
     ads1120.setIDAC2routing(IDAC_AIN3_REFN1);
-    //ads1120.setConversionMode(CONVERSION_CONTINUOUS);
-    //ads1120.startSync();
+    delay(10);
+    restart();
 }
 
-// Lance une conversion continue, gérée par interruption
-void ADC::startContinuous()
+// Starts continuous conversion of the ADC
+void SensorBoard::startContinuous()
 {
-    // Préparation de la première lecture
+    // Init first read
     curRTDSensor = 0;
-    digitalWrite(rtd[curRTDSensor].analogSwitchPin, HIGH);
+    digitalWrite(rtd[curRTDSensor].analogSwitchPin, HIGH);  // Input analog switch ON
     if (rtd[curRTDSensor].measurementType == TYPE_3WIRE) {
         set3WirePT100();
     } else if(rtd[curRTDSensor].measurementType == TYPE_4WIRE) {
@@ -130,51 +150,80 @@ void ADC::startContinuous()
     }
 
     delay(1);
-    ads1120.setDataRate(DATARATE_90_SPS);
+    ads1120.setDataRate(DATARATE_20_SPS);   // No 50/60Hz filtering above 20 SPS
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
     ads1120.startSync();
 }
 
-// Met en pause la conversion continue
-void ADC::stop() {
+// Pauses conversion
+void SensorBoard::stop() {
     ads1120.setConversionMode(CONVERSION_SINGLE_SHOT);
 
-    // Reset des multiplexeurs d'entrées
+    // Reset input analog switches
     for( uint8_t i = 0; i < numRTDSensors; i++ )  {
         digitalWrite(rtd[curRTDSensor].analogSwitchPin, LOW);
     }
 }
 
-// Relance une conversion, continue avec les anciens paramètres
-void ADC::restart() {
+// Restarts conversion
+void SensorBoard::restart() {
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
     ads1120.startSync();
 }
 
-// Reset les sommes des sondes et leur boucle de mesure à 0
-void ADC::resetCounts() {
+// Resets RTD sums
+void SensorBoard::resetCounts() {
     for( uint8_t i = 0; i < numRTDSensors; i++ )  {
         rtd[i].reset();
     }
 }
 
-
-void ADC::calRefResistor(double_t resistanceValue)
+// Ne pas faire la calibration dans une interrupt, ça ne fonctionne pas avec les delays
+// à caler à un endroit et terminer
+void SensorBoard::calRefResistor()
 {
+    #define CALIBRATION_SAMPLES 64.0
+
+    set4WirePT100();
+    digitalWrite(rtd[0].analogSwitchPin, HIGH);
+    delay(1);
+    int32_t sum = 0;    
+
+    for( uint8_t i = 0; i < CALIBRATION_SAMPLES; i++ ) {
+        sum += ads1120.readADC_Single();
+        delay(10);
+    }
+    digitalWrite(rtd[0].analogSwitchPin, LOW);
+    double_t readVal = sum / CALIBRATION_SAMPLES ;
+
+    refResistanceValue = (calResistanceValue * 32767.0 * 8.0 ) / readVal;
+    calTemperature = ads1120.readInternalTemp();
 }
+
+void SensorBoard::convertToTemperature(float_t systemTemperature) {
+
+    // Navigation dans les sondes déclarées
+    for( uint8_t i = 0; i < this->numRTDSensors; i++ ) {
+      
+        rtd[i].resistance = getResistanceValue(i, systemTemperature);
+        rtd[i].temperature = getRTDTempInterpolation(i);
+    } 
+}
+
+
 
 /**
  * @brief Convertit une valeur entière sur 16bits en Resistance en fonction
  * de la valeur de la résistance de calibration refResistanceValue.
  * 
- * @param rtdSensor ID du capteur
+ * @param rtdSensor sensor index
  * @param systemTemperature température actuelle du système
  * @return double_t Résistance en Ohms
  */
-double_t ADC::getResistanceValue(uint8_t rtdSensor, float_t systemTemperature) {
+double_t SensorBoard::getResistanceValue(uint8_t rtdSensor, float_t systemTemperature) {
 
     #define TEMPERATURE_COEFFICIENT_PPM_C 9 // ancien calcul 7.5
-    #define TEMPERATURE_AT_CALIBRATION 24.0
+    //#define TEMPERATURE_AT_CALIBRATION 25.4
 
     double_t gain = 1;
     if( rtd[rtdSensor].measurementType == TYPE_3WIRE ) {
@@ -187,7 +236,7 @@ double_t ADC::getResistanceValue(uint8_t rtdSensor, float_t systemTemperature) {
 
     // Compensation de la mesure 
     // 7.5ppm mesuré (système entier) avec la diff entre la plage 24°C et 12°C
-    float_t ppm = (systemTemperature - TEMPERATURE_AT_CALIBRATION) * TEMPERATURE_COEFFICIENT_PPM_C;
+    float_t ppm = (systemTemperature - calTemperature) * TEMPERATURE_COEFFICIENT_PPM_C;
     Rrtd = Rrtd * (1 + ppm/1000000);
 
     return Rrtd;
@@ -196,13 +245,12 @@ double_t ADC::getResistanceValue(uint8_t rtdSensor, float_t systemTemperature) {
 /**
  * @brief Conversion d'une resistance en température via le calcul par interpolation (plus précis qu'une fonction pour une approche réelle)
  * 
- * @param id sensor ID
- * @param systemTemperature actual temperature of the board
+ * @param id sensor index
  * @return double_t temperature in °C
  */
-double_t ADC::getRTDTempInterpolation(uint8_t id, float_t systemTemperature) {
+double_t SensorBoard::getRTDTempInterpolation(uint8_t id) {
 
-    double_t Rrtd = this->getResistanceValue(id, systemTemperature);
+    double_t Rrtd = rtd[id].resistance;
 
     int16_t index=(int16_t) (Rrtd/10);
     double_t frac = (double_t)(Rrtd/10.0) - index;
@@ -228,25 +276,28 @@ double_t ADC::getRTDTempInterpolation(uint8_t id, float_t systemTemperature) {
  * 
  * @param tempSeche température de la sonde sèche en °C
  * @param tempHumide température du bulbe humide en °C
- * @param pressionAtm en KPa
+ * @param pressionAtm en Pa
  * @return double_t Humidité relative en %
  */
-double_t ADC::getRH(double_t tempSeche, double_t tempHumide, double_t pressionAtm) {
+double_t SensorBoard::getRH(uint8_t dryID, uint8_t wetID, double_t atmPressure) {
+
+    double_t dryTemperature = rtd[dryID].temperature;
+    double_t wetTemperature = rtd[wetID].temperature;
 
     // 1: Calcul de la "constante" psychrométrique
     // Capacité thermique massique de l'air [kJ/kg.°C]
     // 0.00006 * tempSeche + 1.005; ancien calcul
-    double_t Cp = (3 * tempSeche)/50000.0 + 1.005;
+    double_t Cp = (3 * dryTemperature)/50000.0 + 1.005;
     // Energie de vaporiation de l'eau [kJ/kg]
-    double_t lambda = -2.3664 * tempSeche + 2501;
+    double_t lambda = -2.3664 * wetTemperature + 2501;
     double_t A = Cp / (lambda * 0.622 ); // [1/°C]
 
-    // Pression athmosphérique [kPa]
-	double_t P = pressionAtm;
+    // Atmospheric pressure [kPa]
+	double_t P = atmPressure / 1000.0F;
 
-    double_t pVs = 0.6108 * pow(2.71828, ((17.27 * tempHumide)/(tempHumide + 237.3))); // [kPa]
-    double_t pV = pVs - A*P*(tempSeche-tempHumide); // [kPa]
-    double_t pVs2 = 0.6108 * pow(2.71828, ((17.27 * tempSeche)/(tempSeche + 237.3))); // [kPa]
+    double_t pVs = 0.6108 * pow(2.71828, ((17.27 * wetTemperature)/(wetTemperature + 237.3))); // [kPa]
+    double_t pV = pVs - A*P*(dryTemperature-wetTemperature); // [kPa]
+    double_t pVs2 = 0.6108 * pow(2.71828, ((17.27 * dryTemperature)/(dryTemperature + 237.3))); // [kPa]
 
     // Ancien calcul
     //double_t pVs = pow(10,(2.7877+(7.625*mes1)/(241.6+mes1)));
@@ -257,4 +308,11 @@ double_t ADC::getRH(double_t tempSeche, double_t tempHumide, double_t pressionAt
 
     return rh;
 }
+
+
+
+
+
+
+
 

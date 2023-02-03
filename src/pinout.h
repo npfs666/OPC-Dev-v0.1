@@ -1,6 +1,10 @@
 #ifndef PINOUT_h
 #define PINOUT_h
 
+// Général ORDERS
+#define PAUSE_ADC_INTERRUPTS 1
+#define RESUME_ADC_INTERRUPTS 2
+
 // Ecran SPI TFT
 #define LCD_SCK 14
 #define LCD_MOSI 15

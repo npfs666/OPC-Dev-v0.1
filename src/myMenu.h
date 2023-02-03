@@ -22,33 +22,33 @@ double_t SP1=0, SP2=0;
 // FIELD(test,"Power","mOhm",98000,102000,100,1,doNothing,noEvent,noStyle),
 
 MENU(subMenuOpr, " Operateur", doNothing, noEvent, wrapStyle, 
-  FIELD(adc.reg[0].SP,"SP1:"," C",0,100,10,1,doNothing,noEvent,wrapStyle),
+  FIELD(board.reg[0].SP,"SP1:"," C",0,100,10,1,doNothing,noEvent,wrapStyle),
 #if OUTPUTS >= 2
   FIELD(adc.reg[1].SP,"SP2:"," C",0,100,1,0.1,doNothing,noEvent,wrapStyle),
 #endif
   EXIT("<Back"));
 
 
-SELECT(adc.rtd[0].measurementType,selMenuConfInpType1,"Mesure",doNothing,noEvent,wrapStyle
+SELECT(board.rtd[0].measurementType,selMenuConfInpType1,"Mesure",doNothing,noEvent,wrapStyle
   ,VALUE("2 fils",TYPE_2WIRE,doNothing,noEvent)
   ,VALUE("3 fils",TYPE_3WIRE,doNothing,noEvent)
   ,VALUE("4 fils",TYPE_4WIRE,doNothing,noEvent)
 );
 MENU(subMenuConfInp1, " Sonde 1", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfInpType1),
-  FIELD(adc.rtd[0].offset,"Offset:"," C",-5,5,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(board.rtd[0].offset,"Offset:"," C",-5,5,1,0.1,doNothing,noEvent,wrapStyle),
   EXIT("<Back"));
 
 
 #if SENSORS >= 2
-SELECT(adc.rtd[1].measurementType,selMenuConfInpType2,"Mesure",doNothing,noEvent,wrapStyle
+SELECT(board.rtd[1].measurementType,selMenuConfInpType2,"Mesure",doNothing,noEvent,wrapStyle
   ,VALUE("2 fils",TYPE_2WIRE,doNothing,noEvent)
   ,VALUE("3 fils",TYPE_3WIRE,doNothing,noEvent)
   ,VALUE("4 fils",TYPE_4WIRE,doNothing,noEvent)
 );
 MENU(subMenuConfInp2, " Sonde 2", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfInpType2),
-  FIELD(adc.rtd[1].offset,"Offset:"," C",-5,5,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(board.rtd[1].offset,"Offset:"," C",-5,5,1,0.1,doNothing,noEvent,wrapStyle),
   EXIT("<Back"));
 #endif
 #if SENSORS >= 3
@@ -75,13 +75,13 @@ MENU(subMenuConfInp, " Sondes", doNothing, noEvent, wrapStyle,
 
 
 
-SELECT(adc.reg[0].mode,selMenuConfCntrSP1Mode,"Mode",doNothing,noEvent,wrapStyle
+SELECT(board.reg[0].mode,selMenuConfCntrSP1Mode,"Mode",doNothing,noEvent,wrapStyle
   ,VALUE("Chauffer",1,doNothing,noEvent)
   ,VALUE("Refroidir",2,doNothing,noEvent)
 );
 MENU(subMenuConfCntrSP1, " Sortie 1", doNothing, noEvent, wrapStyle, 
   SUBMENU(selMenuConfCntrSP1Mode),
-  FIELD(adc.reg[0].hysteresis,"Hysteresis:"," C",0,10,1,0.1,doNothing,noEvent,wrapStyle),
+  FIELD(board.reg[0].hysteresis,"Hysteresis:"," C",0,10,1,0.1,doNothing,noEvent,wrapStyle),
   EXIT("<Back"));
 
 #if OUTPUTS >= 2
@@ -102,9 +102,16 @@ MENU(subMenuConfCntr, " Regulateur", doNothing, noEvent, wrapStyle,
 #endif
      EXIT("<Back"));
 
+MENU(subMenuConfCal, " Calibration", doNothing, noEvent, wrapStyle,
+  OP(" ATTENTION !", doNothing,noEvent),
+  altFIELD(decPlaces<3>::menuField,board.calResistanceValue," Rcal"," Ohm",99.000,101.000,0.1,0.001,doNothing,noEvent,wrapStyle),
+  OP(" Calibrer", menuConfCal,enterEvent),
+  EXIT("<Back"));
+
 MENU(subMenuConf, " Configuration", doNothing, noEvent, wrapStyle, 
   SUBMENU(subMenuConfInp), 
-  SUBMENU(subMenuConfCntr), 
+  SUBMENU(subMenuConfCntr),
+  SUBMENU(subMenuConfCal),
   EXIT("<Back"));
 
 

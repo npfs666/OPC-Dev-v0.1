@@ -10,17 +10,7 @@
  *
  * @copyright Copyright (c) 2022
  *
- *
- *
- * Code a enlever du SPI.cpp pour virer le TinyUSB qui marche pas
-// * #ifdef USE_TINYUSB
-// For Serial when selecting TinyUSB.  Can't include in the core because Arduino IDE
-// will not link in libraries called from the core.  Instead, add the header to all
-// the standard libraries in the hope it will still catch some user cases where they
-// use these libraries.
-// See https://github.com/earlephilhower/arduino-pico/issues/167#issuecomment-848622174
-//#include <Adafruit_TinyUSB.h>
-//#endif
+ * MIT license, all text above must be included in any redistribution 
  */
 #include <pinout.h>
 #include <SPI.h>
@@ -42,7 +32,16 @@
 
 using namespace Menu;
 
-ADC adc;
+SensorBoard board;
+bool enterCalMode = false;
+void adcInterrupt();
+void menuConfCal(void) {
+
+	rp2040.fifo.push(PAUSE_ADC_INTERRUPTS);
+	delay(10);
+	board.calRefResistor();
+	rp2040.fifo.push(RESUME_ADC_INTERRUPTS);
+}
 
 #include "myMenu.h"
 
@@ -51,11 +50,10 @@ ADC adc;
 
 Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, LCD_CS, LCD_DC, LCD_RESET);
 Adafruit_BME280 bme;
-void adcInterrupt();
+
 double temperatureADC = 0;
 
-// Déclaration des éléments du menu
-//serialIn serial(Serial);
+// Menu declaration
 MENU_INPUTS(in);
 #define MAX_DEPTH 5
 MENU_OUTPUTS(out, MAX_DEPTH, 
@@ -72,13 +70,13 @@ result idle(menuOut &o, idleEvent e)
   // Si on rentre en écran de base (lancer l'ADC par exemple)
   if (e == idleStart) {
 	
-	adc.resetCounts();
-	adc.startContinuous();
+	board.resetCounts();
+	board.startContinuous();
   }
 
   // Retour dans la partie menu (couper l'ADC par ex)
   if (e == idleEnd ) {
-	adc.stop();
+	board.stop();
   }
 
   return proceed;
@@ -89,13 +87,7 @@ result idle(menuOut &o, idleEvent e)
 // Interruption du clic bouton
 void IsrButton(void)
 {
-  /*if (!digitalRead(ROTARY_PIN_BUT)) {
-    nav.doNav(navCmds::escCmd);
-  } else {
-    nav.doNav(navCmds::enterCmd);
-  }*/
-  nav.doNav(navCmds::enterCmd);
-  //delay(25); // Ceci fait tout déconner je ne sais pas pour quelle raison
+ 	nav.doNav(navCmds::enterCmd);
 }
 // Interruption de l'encodeur rotatif
 void IsrRotenc(void)
@@ -104,8 +96,6 @@ void IsrRotenc(void)
     nav.doNav(navCmds::upCmd);
   else
     nav.doNav(navCmds::downCmd);
-  
-  //delay(10); // Ceci fait tout déconner je ne sais pas pour quelle raison
 }
 
 
@@ -114,7 +104,7 @@ void IsrRotenc(void)
 
 void setup()
 {
-	Serial.begin(115200);
+	//Serial.begin(115200);
 	delay(100);
 	//Serial.println("Open Process Controller v0.1");
 
@@ -125,15 +115,16 @@ void setup()
 	pinMode(SW_MUX_2, OUTPUT);
 	pinMode(SW_MUX_3, OUTPUT);
 
-	adc.init();
-	adc.addRTD(0, TYPE_4WIRE, SW_MUX_1, 64, 0.01);
-	adc.addRTD(1, TYPE_4WIRE, SW_MUX_2, 64, 0);
-	adc.resetCounts();
+	board.init();
+	board.addRTD(TYPE_4WIRE, SW_MUX_1, 16, 0);
+	board.addRTD(TYPE_4WIRE, SW_MUX_2, 16, 0);
+
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
 }
 
 void setup1()
 {
+	Serial.begin(115200);
 	delay(100);
 
 	// Configuration de l'encodeur rotatif
@@ -160,7 +151,6 @@ void setup1()
 
 	nav.idleTask = idle;	// point a function to be used when menu is suspended
   	nav.timeOut=10;	// in seconds
-	//nav.idleOn();
 	nav.exit();
 }
 
@@ -173,38 +163,31 @@ void setup1()
  */
 void loop1()
 {
-	
 	nav.poll(); // this device only draws when needed
 	
 	// if nouvelle mesure && qu'on est en idle
 	if(  nav.idleTask == nav.sleepTask ) {
 
-		if (adc.newMeasurement)
+		if (board.newMeasurement)
 		{
 
 		float_t temperature = bme.readTemperature(); // Lecture de la T°C actuelle du système de mesure
-		float_t pressure = bme.readPressure(); // Pa
+		float_t pressure = bme.readPressure(); 		 // Pa
 
 		// lecture de la dernière série de valeurs
 		// Lire toutes les valeurs de resistances directement en liste, conversion en t° ensuite (long en calcul)
-		double_t rtd1 = adc.getResistanceValue(0, temperature);
-		double_t rtd2 = adc.getResistanceValue(1, temperature);
-		
-		double_t mes1 = adc.getRTDTempInterpolation(0, temperatureADC);
-		double_t mes2 = adc.getRTDTempInterpolation(1, temperatureADC);
-		adc.newMeasurement = false;		
-
-		double_t rh = adc.getRH(mes2, mes1, pressure / 1000.0F );
-		double_t pressionABS = bme.readPressure() / 100.0F;
+		board.convertToTemperature(temperatureADC);
+		double_t rh = board.getRH(0, 1, pressure);
+		board.newMeasurement = false;	
 
 		// Envoi sur le port série
 		Serial.print(temperature, 1); Serial.print(" C ;  ");
 		Serial.print(temperatureADC, 1); Serial.print(" C ;  ");
-		Serial.print(rtd1, 3); Serial.print(" ; ");
-		Serial.print(mes1, 3); Serial.print(" ||||| ");
-		Serial.print(rtd2, 3); Serial.print(" ; ");
-		Serial.print(mes2, 3); Serial.print(" ||||| ");
-		Serial.print(pressionABS, 1); Serial.print(" ; ");
+		Serial.print(board.rtd[0].resistance, 4); Serial.print(" ; ");
+		Serial.print(board.rtd[0].temperature, 3); Serial.print(" ||||| ");
+		Serial.print(board.rtd[1].resistance, 4); Serial.print(" ; ");
+		Serial.print(board.rtd[1].temperature, 3); Serial.print(" ||||| ");
+		Serial.print((pressure/100.0F), 1); Serial.print(" ; ");
 		Serial.print(rh, 2);
 		Serial.println("");
 		
@@ -224,20 +207,20 @@ void loop1()
 		tft.setTextSize(1);
 		tft.setCursor(0, 40);
 		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-		sprintf(TX,"%03.3lf", mes1);
+		sprintf(TX,"%03.3lf", board.rtd[0].temperature);
 		tft.printf(TX);
 		// test2
 		tft.setTextSize(1);
 		tft.setCursor(60, 40);
 		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-		sprintf(TX,"%03.3lf", mes2);
+		sprintf(TX,"%03.3lf", board.rtd[1].temperature);
 		tft.printf(TX);
 		// Affichage de la consigne
 		tft.setTextSize(4);
 		tft.setCursor(0, 60);
 		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
 		//sprintf(TX,"%03.1lf", 98.5);
-		sprintf(TX,"%04.1lf", pressionABS);
+		sprintf(TX,"%04.1lf", (pressure/100.0F));
 		tft.printf(TX);
 		// Affichage de l'état des sorties
 		tft.setTextSize(2);
@@ -291,7 +274,7 @@ void loop1()
 		}
 	}
 
-	delay(10);
+	delay(1);
 }
 
 
@@ -304,8 +287,19 @@ void loop1()
  *
  */
 void loop()
-{
+{	
+	if(  rp2040.fifo.available() > 0) {
+		uint32_t val = rp2040.fifo.pop();
+		
+		// Pauses ADC IRQ while calibrating
+		if( val == PAUSE_ADC_INTERRUPTS ) {
+			irq_set_enabled(13, false); // Pause IO interrupts
+		} else if( val == RESUME_ADC_INTERRUPTS ) {
+			irq_set_enabled(13, true); // Resume IO interrupts
+		}
+	}
 
+	delay(10);
 }
 
 
@@ -317,50 +311,50 @@ void loop()
 
 void adcInterrupt() {
 
-    int32_t value = adc.ads1120.readADC();
+    int32_t value = board.ads1120.readADC();
 	
-    adc.rtd[adc.curRTDSensor].add(value);
+    board.rtd[board.curRTDSensor].add(value);
 
     // Cas particulier de la mesure en 3 fils (current chopping) : 
 	// inversion des sources d'exitation de courant à la moitié de la série, pour supprimer leur inégalité de courant
-	if ((adc.rtd[adc.curRTDSensor].measurementType == TYPE_3WIRE) 
-        && (adc.rtd[adc.curRTDSensor].sampleCount == (adc.rtd[adc.curRTDSensor].samples / 2)) 
-        && (adc.rtd[adc.curRTDSensor].samples % 2 == 0) )
+	if ((board.rtd[board.curRTDSensor].measurementType == TYPE_3WIRE) 
+        && (board.rtd[board.curRTDSensor].sampleCount == (board.rtd[board.curRTDSensor].samples / 2)) 
+        && (board.rtd[board.curRTDSensor].samples % 2 == 0) )
 	{
-		adc.invert3WireIDAC();
+		board.invert3WireIDAC();
 	}
 
     // If all samples are measured, compute the result
-    if (adc.rtd[adc.curRTDSensor].sampleCount == adc.rtd[adc.curRTDSensor].samples)
+    if (board.rtd[board.curRTDSensor].sampleCount == board.rtd[board.curRTDSensor].samples)
 	{
-        adc.stop();
+        board.stop();
 
-		temperatureADC = adc.ads1120.readInternalTemp();	// T°C interne de l'ADC
+		temperatureADC = board.ads1120.readInternalTemp();	// T°C interne de l'ADC
 
-		adc.rtd[adc.curRTDSensor].compute();
+		board.rtd[board.curRTDSensor].compute();
 
-        digitalWrite(adc.rtd[adc.curRTDSensor].analogSwitchPin, LOW);
-		adc.curRTDSensor++;
+        digitalWrite(board.rtd[board.curRTDSensor].analogSwitchPin, LOW);
+		board.curRTDSensor++;
 
         // Fin de la boucle de mesure on recommence
-        if( adc.curRTDSensor == adc.numRTDSensors ) {
-            adc.curRTDSensor = 0;
-			adc.newMeasurement = true;
+        if( board.curRTDSensor == board.numRTDSensors ) {
+            board.curRTDSensor = 0;
+			board.newMeasurement = true;
         }
 
         // Allumage de l'analog switch concerné par la conversion
-        digitalWrite(adc.rtd[adc.curRTDSensor].analogSwitchPin, HIGH);
+        digitalWrite(board.rtd[board.curRTDSensor].analogSwitchPin, HIGH);
 
         // Initialisation du type de mesure
-        if (adc.rtd[adc.curRTDSensor].measurementType == TYPE_3WIRE) {
-			adc.set3WirePT100();
-		} else if(adc.rtd[adc.curRTDSensor].measurementType == TYPE_4WIRE) {
-            adc.set4WirePT100();
+        if (board.rtd[board.curRTDSensor].measurementType == TYPE_3WIRE) {
+			board.set3WirePT100();
+		} else if(board.rtd[board.curRTDSensor].measurementType == TYPE_4WIRE) {
+            board.set4WirePT100();
         }
 
         // Pause et relance de la conversion continue
-		delay(1);
-		adc.restart();
+		delay(10);
+		board.restart();
     }
 
 }
