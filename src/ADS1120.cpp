@@ -113,7 +113,6 @@ int ADS1120::readADC_Single()
     // Espera a que DRDY se ponga en nivel bajo. Esto es un riesgo porque pude quedar bloqueado el codigo aca.
     // Se deberia poner un timeout configurable en el metodo de begin y devolver un error si no responde
   }
-  //delay(100);
 
   int adcVal = SPI.transfer(SPI_MASTER_DUMMY);
   adcVal = (adcVal << 8) | SPI.transfer(SPI_MASTER_DUMMY);
@@ -127,7 +126,7 @@ byte *ADS1120::readADC_SingleArray()
   digitalWrite(ADS1120_CS_PIN, LOW); // Take CS low
   delayMicroseconds(1);              // Minimum of td(CSSC)
 
-  SPI.transfer(0x08);
+  SPI.transfer(CMD_START_SYNC);
   while (digitalRead(ADS1120_DRDY_PIN) == HIGH)
   {
     // Espera a que DRDY se ponga en nivel bajo. Esto es un riesgo porque pude quedar bloqueado el codigo aca.

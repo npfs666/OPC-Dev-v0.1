@@ -149,7 +149,7 @@ void SensorBoard::startContinuous()
         set4WirePT100();
     }
 
-    delay(1);
+    delay(10);
     ads1120.setDataRate(DATARATE_20_SPS);   // No 50/60Hz filtering above 20 SPS
     ads1120.setConversionMode(CONVERSION_CONTINUOUS);
     ads1120.startSync();
@@ -184,20 +184,24 @@ void SensorBoard::calRefResistor()
 {
     #define CALIBRATION_SAMPLES 64.0
 
-    set4WirePT100();
     digitalWrite(rtd[0].analogSwitchPin, HIGH);
-    delay(1);
+    set4WirePT100();
+
     int32_t sum = 0;    
 
     for( uint8_t i = 0; i < CALIBRATION_SAMPLES; i++ ) {
-        sum += ads1120.readADC_Single();
         delay(10);
+        sum += ads1120.readADC_Single();
     }
     digitalWrite(rtd[0].analogSwitchPin, LOW);
     double_t readVal = sum / CALIBRATION_SAMPLES ;
 
-    refResistanceValue = (calResistanceValue * 32767.0 * 8.0 ) / readVal;
+    refResistanceValue = (calResistanceValue * 32768.0 * 8.0 ) / readVal;
     calTemperature = ads1120.readInternalTemp();
+
+    Serial.print(readVal,2);Serial.print(" | ");
+    Serial.print(refResistanceValue,3);Serial.print(" | ");
+    Serial.println(calTemperature,2);
 }
 
 void SensorBoard::convertToTemperature(float_t systemTemperature) {
@@ -222,7 +226,7 @@ void SensorBoard::convertToTemperature(float_t systemTemperature) {
  */
 double_t SensorBoard::getResistanceValue(uint8_t rtdSensor, float_t systemTemperature) {
 
-    #define TEMPERATURE_COEFFICIENT_PPM_C 9 // ancien calcul 7.5
+    #define TEMPERATURE_COEFFICIENT_PPM_C 7.5 // ancien calcul 7.5
     //#define TEMPERATURE_AT_CALIBRATION 25.4
 
     double_t gain = 1;
@@ -232,12 +236,12 @@ double_t SensorBoard::getResistanceValue(uint8_t rtdSensor, float_t systemTemper
         gain = 8.0;
     }
 
-    double_t Rrtd = (rtd[rtdSensor].avgValue * refResistanceValue) / (32767.0 * gain);
+    double_t Rrtd = (rtd[rtdSensor].avgValue * refResistanceValue) / (32768.0 * gain);
 
     // Compensation de la mesure 
     // 7.5ppm mesuré (système entier) avec la diff entre la plage 24°C et 12°C
-    float_t ppm = (systemTemperature - calTemperature) * TEMPERATURE_COEFFICIENT_PPM_C;
-    Rrtd = Rrtd * (1 + ppm/1000000);
+    //double_t ppm = (systemTemperature - calTemperature) * TEMPERATURE_COEFFICIENT_PPM_C;
+    //Rrtd = Rrtd * (1 + ppm/1000000.0);
 
     return Rrtd;
 }

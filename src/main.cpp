@@ -41,6 +41,7 @@ void menuConfCal(void) {
 	delay(10);
 	board.calRefResistor();
 	rp2040.fifo.push(RESUME_ADC_INTERRUPTS);
+	//nav.exit();
 }
 
 #include "myMenu.h"
@@ -115,9 +116,14 @@ void setup()
 	pinMode(SW_MUX_2, OUTPUT);
 	pinMode(SW_MUX_3, OUTPUT);
 
+	// Set pin 23 HIGH to switch the pico DC-DC converter to PWM (improved ripple)
+	// Improves a lot measurement stability
+	pinMode(23, OUTPUT);
+	digitalWrite(23, HIGH);
+
 	board.init();
-	board.addRTD(TYPE_4WIRE, SW_MUX_1, 16, 0);
-	board.addRTD(TYPE_4WIRE, SW_MUX_2, 16, 0);
+	board.addRTD(TYPE_4WIRE, SW_MUX_1, 32, 0);
+	board.addRTD(TYPE_4WIRE, SW_MUX_2, 32, 0);
 
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
 }
@@ -170,7 +176,6 @@ void loop1()
 
 		if (board.newMeasurement)
 		{
-
 		float_t temperature = bme.readTemperature(); // Lecture de la T°C actuelle du système de mesure
 		float_t pressure = bme.readPressure(); 		 // Pa
 
@@ -181,7 +186,7 @@ void loop1()
 		board.newMeasurement = false;	
 
 		// Envoi sur le port série
-		Serial.print(temperature, 1); Serial.print(" C ;  ");
+		Serial.print(board.rtd[0].avgValue, 2); Serial.print(" ;  ");
 		Serial.print(temperatureADC, 1); Serial.print(" C ;  ");
 		Serial.print(board.rtd[0].resistance, 4); Serial.print(" ; ");
 		Serial.print(board.rtd[0].temperature, 3); Serial.print(" ||||| ");
@@ -201,7 +206,8 @@ void loop1()
 		tft.setTextSize(4);
 		tft.setCursor(0, 5);
 		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-		sprintf(TX,"%03.2lf", rh);
+		//sprintf(TX,"%03.2lf", rh);
+		sprintf(TX,"%03.4lf", board.rtd[0].resistance);
 		tft.printf(TX);
 		// test
 		tft.setTextSize(1);
@@ -296,6 +302,7 @@ void loop()
 			irq_set_enabled(13, false); // Pause IO interrupts
 		} else if( val == RESUME_ADC_INTERRUPTS ) {
 			irq_set_enabled(13, true); // Resume IO interrupts
+			nav.exit();
 		}
 	}
 
