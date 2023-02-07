@@ -84,9 +84,9 @@ class Measurement {
 class SensorBoard {
 
   public:
-    double_t refResistanceValue = 1649.834; // Value of Rref after calibration
+    double_t refResistanceValue = 1649.819; // Value of Rref after calibration
     double_t calResistanceValue = 100.056;
-    double_t calTemperature = 21.2;
+    double_t calTemperature = 22.12;
 
     uint8_t numRTDSensors;  // number of RTD sensors
     uint8_t curRTDSensor;   // cur sensor index

@@ -46,5 +46,7 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "iostream": "cpp"
-    }
+    },
+    "cortex-debug.openocdPath": "C:/Users/Brendan/.platformio/packages/tool-openocd-rp2040-earlephilhower/bin/openocd.exe",
+    "cortex-debug.gdbPath": "C:/Users/Brendan/.platformio/packages/toolchain-rp2040-earlephilhower/bin/arm-none-eabi-gdb.exe"
 }

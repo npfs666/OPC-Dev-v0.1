@@ -105,9 +105,7 @@ void IsrRotenc(void)
 
 void setup()
 {
-	//Serial.begin(115200);
 	delay(100);
-	//Serial.println("Open Process Controller v0.1");
 
 	// Configuration des pins de commandes des analog switches
 	pinMode(SW_3_WIRE, OUTPUT);
@@ -132,6 +130,7 @@ void setup1()
 {
 	Serial.begin(115200);
 	delay(100);
+	Serial.println("Open Process Controller v0.1");
 
 	// Configuration de l'encodeur rotatif
 	pinMode(ROTENC_A, INPUT);
@@ -175,7 +174,7 @@ void loop1()
 	if(  nav.idleTask == nav.sleepTask ) {
 
 		if (board.newMeasurement)
-		{
+		{			
 		float_t temperature = bme.readTemperature(); // Lecture de la T°C actuelle du système de mesure
 		float_t pressure = bme.readPressure(); 		 // Pa
 
@@ -219,14 +218,16 @@ void loop1()
 		tft.setTextSize(1);
 		tft.setCursor(60, 40);
 		tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-		sprintf(TX,"%03.3lf", board.rtd[1].temperature);
+		//sprintf(TX,"%03.3lf", board.rtd[1].temperature);
+		sprintf(TX,"%02.2lf", board.calTemperature);
 		tft.printf(TX);
 		// Affichage de la consigne
 		tft.setTextSize(4);
 		tft.setCursor(0, 60);
 		tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
 		//sprintf(TX,"%03.1lf", 98.5);
-		sprintf(TX,"%04.1lf", (pressure/100.0F));
+		//sprintf(TX,"%04.1lf", (pressure/100.0F));
+		sprintf(TX,"%02.2lf", temperatureADC);
 		tft.printf(TX);
 		// Affichage de l'état des sorties
 		tft.setTextSize(2);
