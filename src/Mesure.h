@@ -22,7 +22,8 @@ class RTDSensor {
     uint8_t measurementType;
     uint8_t analogSwitchPin;
     double_t avgValue;
-    int32_t sum;
+    double_t val;
+    double_t sum;
     uint16_t samples, sampleCount;
     float_t offset;
     double_t resistance;
@@ -32,6 +33,7 @@ class RTDSensor {
     RTDSensor(uint8_t measurementType, uint8_t analogSwitchPin, uint16_t samples, float_t offset);
     void reset();
     void add(int32_t value);
+    void addLP(int32_t value);
     void compute();
     double_t readValue();
     

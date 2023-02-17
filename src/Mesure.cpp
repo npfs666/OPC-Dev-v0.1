@@ -13,6 +13,7 @@ RTDSensor::RTDSensor() {}
  */
 RTDSensor::RTDSensor(uint8_t type, uint8_t switchPin, uint16_t samples, float_t offset) {
 
+    #define ALPHA 0.6
     this->measurementType = type;
     this->analogSwitchPin = switchPin;
     this->samples = samples;
@@ -21,17 +22,36 @@ RTDSensor::RTDSensor(uint8_t type, uint8_t switchPin, uint16_t samples, float_t 
 }
 void RTDSensor::add(int32_t value)
 {
+
     sum += value;
+    sampleCount++;
+}
+/**
+ * @brief Low pass EMA (exponential moving average) Filter
+ * 
+ * @param value 
+ */
+void RTDSensor::addLP(int32_t value)
+{
+    if( this->val == 0 ) 
+        this->val = value;
+    else
+        this->val = (double_t) ((ALPHA * value) + (1.0 - ALPHA) * this->val);
+    //Serial.print(this->val,2); Serial.print(" | ");Serial.println(value);
+    //Serial.println(this->val);
+    sum += this->val;
     sampleCount++;
 }
 void RTDSensor::reset()
 {
     sum = 0;
     sampleCount = 0;
+    val = 0;
 }
 void RTDSensor::compute()
 {
-    avgValue = sum / (samples / 1.0);
+    avgValue = (double_t) sum / samples;
+    //Serial.print(sum);Serial.println("  |  ");
     this->reset();
 }
 double_t RTDSensor::readValue()

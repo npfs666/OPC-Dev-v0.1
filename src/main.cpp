@@ -120,8 +120,8 @@ void setup()
 	digitalWrite(23, HIGH);
 
 	board.init();
-	board.addRTD(TYPE_4WIRE, SW_MUX_1, 32, 0);
-	board.addRTD(TYPE_4WIRE, SW_MUX_2, 32, 0);
+	board.addRTD(TYPE_4WIRE, SW_MUX_1, 16, 0);
+	board.addRTD(TYPE_4WIRE, SW_MUX_2, 16, 0);
 
 	attachInterrupt(digitalPinToInterrupt(SPI_DRDY), adcInterrupt, FALLING);
 }
@@ -186,11 +186,12 @@ void loop1()
 
 		// Envoi sur le port série
 		Serial.print(board.rtd[0].avgValue, 2); Serial.print(" ;  ");
-		Serial.print(temperatureADC, 1); Serial.print(" C ;  ");
 		Serial.print(board.rtd[0].resistance, 4); Serial.print(" ; ");
 		Serial.print(board.rtd[0].temperature, 3); Serial.print(" ||||| ");
+		Serial.print(board.rtd[1].avgValue, 2); Serial.print(" ;  ");
 		Serial.print(board.rtd[1].resistance, 4); Serial.print(" ; ");
 		Serial.print(board.rtd[1].temperature, 3); Serial.print(" ||||| ");
+		Serial.print(temperatureADC, 1); Serial.print(" C ;  ");
 		Serial.print((pressure/100.0F), 1); Serial.print(" ; ");
 		Serial.print(rh, 2);
 		Serial.println("");
